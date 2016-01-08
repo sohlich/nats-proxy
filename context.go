@@ -1,18 +1,24 @@
 package natsproxy
 
-import "net/http"
-
 type Context struct {
-	request    *http.Request
-	writer     http.ResponseWriter
+	request    *Request
+	response   *Response
 	index      int
 	abortIndex int
 }
 
-func newContext(rw http.ResponseWriter, req *http.Request) *Context {
+func (c *Context) IsAborted() bool {
+	return c.index >= c.abortIndex
+}
+
+func (c *Context) Abort() {
+	c.abortIndex = c.index
+}
+
+func newContext(res *Response, req *Request) *Context {
 	return &Context{
 		req,
-		rw,
+		res,
 		0,
 		1<<31 - 1,
 	}

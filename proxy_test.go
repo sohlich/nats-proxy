@@ -15,18 +15,18 @@ import (
 func TestProxy(t *testing.T) {
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NatsClient{
-		clientConn,
-	}
-	natsClient.Subscribe("/test", Handler)
+	natsClient := NewNatsClient(clientConn)
+	natsClient.Subscribe("POST", "/test", Handler)
+	// defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats.DefaultURL)
 	proxyHandler := NewNatsProxy(proxyConn)
 	http.Handle("/", proxyHandler)
+	// defer proxyConn.Close()
 
 	log.Println("initializing proxy")
 	go http.ListenAndServe(":3000", nil)
-	time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	log.Println("Posting request")
 	reader := bytes.NewReader([]byte("testData"))
@@ -39,13 +39,13 @@ func TestProxy(t *testing.T) {
 
 	out, _ := ioutil.ReadAll(resp.Body)
 	log.Println(string(out))
-
+	log.Println(resp.Header)
 }
 
-func Handler(res *Response, req *Request) {
+func Handler(c *Context) {
 	log.Println("Getting request")
-	log.Println(req.URL)
-	req.Form.Get("email")
+	log.Println(c.request.URL)
+	c.request.Form.Get("email")
 
 	respStruct := struct {
 		User string
@@ -54,5 +54,6 @@ func Handler(res *Response, req *Request) {
 	}
 
 	bytes, _ := json.Marshal(respStruct)
-	res.Body = bytes
+	c.response.Body = bytes
+	c.response.Header.Add("X-AUTH", "12345")
 }

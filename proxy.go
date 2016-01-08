@@ -9,30 +9,17 @@ import (
 	"github.com/nats-io/nats"
 )
 
-type FilterChain []http.HandlerFunc
-
 type NatsProxy struct {
-	conn    *nats.Conn
-	filters FilterChain
+	conn *nats.Conn
 }
 
 func NewNatsProxy(conn *nats.Conn) *NatsProxy {
 	return &NatsProxy{
 		conn,
-		make([]http.HandlerFunc, 0),
 	}
-}
-
-func (np *NatsProxy) Use(middleware http.HandlerFunc) {
-	np.filters = append(np.filters, middleware)
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	for _, filter := range np.filters {
-		filter(rw, req)
-	}
-
-	response := Response{}
 	request, err := NewRequestFromHttp(req)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
@@ -43,10 +30,29 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
-	np.conn.Request(fmt.Sprintf("%s:%s", req.Method, req.URL.Path),
+	msg, respErr := np.conn.Request(fmt.Sprintf("%s:%s", req.Method, req.URL.Path),
 		bytes,
-		200*time.Millisecond)
-	rw.Write(response.Body)
+		10*time.Second)
+	if respErr != nil {
+		http.Error(rw, "No response", http.StatusInternalServerError)
+		return
+	}
+	response := NewResponse()
+	if err := json.Unmarshal(msg.Data, response); err != nil {
+		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
+		return
+	}
+
+	copyHeader(response.Header, rw.Header())
+	rw.Write(msg.Data)
+}
+
+func copyHeader(src, dst http.Header) {
+	for k, v := range src {
+		for _, val := range v {
+			dst.Add(k, val)
+		}
+	}
 }
 
 // func NewProxyHandler(conn *nats.Conn) (http.HandlerFunc, error) {
