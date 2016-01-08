@@ -44,7 +44,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	copyHeader(response.Header, rw.Header())
-	rw.Write(msg.Data)
+	rw.Write(response.Body)
 }
 
 func copyHeader(src, dst http.Header) {

@@ -38,8 +38,14 @@ func TestProxy(t *testing.T) {
 	}
 
 	out, _ := ioutil.ReadAll(resp.Body)
-	log.Println(string(out))
-	log.Println(resp.Header)
+	respStruct := &struct {
+		User string
+	}{}
+
+	json.Unmarshal(out, respStruct)
+	if respStruct.User != "Radek" {
+		t.Error("Response assertion failed")
+	}
 }
 
 func Handler(c *Context) {
