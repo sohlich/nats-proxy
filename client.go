@@ -4,8 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/nats-io/nats"
+)
+
+const (
+	GET    = "GET"
+	POST   = "POST"
+	PUT    = "PUT"
+	DELETE = "DELETE"
 )
 
 type NatsHandler func(c *Context)
@@ -33,8 +41,27 @@ func (np *NatsClient) Use(middleware NatsHandler) {
 	np.filters = append(np.filters, middleware)
 }
 
+func (nc *NatsClient) GET(url string, handler NatsHandler) {
+	nc.Subscribe(GET, url, handler)
+}
+
+func (nc *NatsClient) POST(url string, handler NatsHandler) {
+	nc.Subscribe(POST, url, handler)
+}
+
+func (nc *NatsClient) PUT(url string, handler NatsHandler) {
+	nc.Subscribe(PUT, url, handler)
+}
+
+func (nc *NatsClient) DELETE(url string, handler NatsHandler) {
+	nc.Subscribe(DELETE, url, handler)
+}
+
 func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
-	nc.conn.Subscribe(fmt.Sprintf("%s:%s", method, url), func(m *nats.Msg) {
+	subscribeUrl := strings.Replace(url, "/", ".", -1)
+	subscribeUrl = fmt.Sprintf("%s:%s", method, subscribeUrl)
+	log.Printf("Subscribing to %s", subscribeUrl)
+	nc.conn.Subscribe(subscribeUrl, func(m *nats.Msg) {
 		log.Println("Received subscription")
 		request := &Request{}
 		if err := request.UnmarshallFrom(m.Data); err != nil {
@@ -55,7 +82,7 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 		if !c.IsAborted() {
 			handler(c)
 		}
-		bytes, err := json.Marshal(c.response)
+		bytes, err := json.Marshal(c.Response)
 		if err != nil {
 			log.Println(err)
 			return

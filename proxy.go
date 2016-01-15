@@ -3,7 +3,9 @@ package natsproxy
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats"
@@ -30,7 +32,8 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
-	msg, respErr := np.conn.Request(fmt.Sprintf("%s:%s", req.Method, req.URL.Path),
+	log.Printf("Sending to %s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1))
+	msg, respErr := np.conn.Request(fmt.Sprintf("%s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1)),
 		bytes,
 		10*time.Second)
 	if respErr != nil {
@@ -42,7 +45,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}
-
+	log.Printf("Gettings response to %+v", response)
 	copyHeader(response.Header, rw.Header())
 	rw.Write(response.Body)
 }
