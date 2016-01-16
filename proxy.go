@@ -1,6 +1,7 @@
 package natsproxy
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -27,14 +28,14 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
-	bytes, err := json.Marshal(&request)
+	reqBytes, err := json.Marshal(&request)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Sending to %s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1))
 	msg, respErr := np.conn.Request(fmt.Sprintf("%s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1)),
-		bytes,
+		reqBytes,
 		10*time.Second)
 	if respErr != nil {
 		http.Error(rw, "No response", http.StatusInternalServerError)
@@ -45,9 +46,18 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Gettings response to %+v", response)
+	// Copy headers
+	// from NATS response.
 	copyHeader(response.Header, rw.Header())
-	rw.Write(response.Body)
+
+	// Write the response code
+	rw.WriteHeader(response.StatusCode)
+
+	// Write the bytes of response
+	// to a response writer.
+	var buf bytes.Buffer
+	buf.Write(response.Body)
+	buf.WriteTo(rw)
 }
 
 func copyHeader(src, dst http.Header) {
