@@ -43,6 +43,7 @@ func TestProxy(t *testing.T) {
 	}{}
 
 	json.Unmarshal(out, respStruct)
+	log.Println(respStruct)
 	if respStruct.User != "Radek" {
 		t.Error("Response assertion failed")
 	}

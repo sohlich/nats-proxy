@@ -28,6 +28,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
+
 	reqBytes, err := json.Marshal(&request)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
@@ -42,10 +43,15 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	response := NewResponse()
-	if err := json.Unmarshal(msg.Data, response); err != nil {
+	err = response.Decode(msg.Data)
+	if err != nil {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}
+	writeResponse(rw, response)
+}
+
+func writeResponse(rw http.ResponseWriter, response *Response) {
 	// Copy headers
 	// from NATS response.
 	copyHeader(response.Header, rw.Header())
@@ -55,9 +61,8 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Write the bytes of response
 	// to a response writer.
-	var buf bytes.Buffer
-	buf.Write(response.Body)
-	buf.WriteTo(rw)
+	// TODO benchmark
+	bytes.NewBuffer(response.Body).WriteTo(rw)
 }
 
 func copyHeader(src, dst http.Header) {
@@ -67,22 +72,3 @@ func copyHeader(src, dst http.Header) {
 		}
 	}
 }
-
-// func NewProxyHandler(conn *nats.Conn) (http.HandlerFunc, error) {
-// 	handler := func(rw http.ResponseWriter, req *http.Request) {
-// 		response := Response{}
-// 		request, err := NewRequestFromHttp(req)
-// 		if err != nil {
-// 			http.Error(rw, "Cannot process request", http.StatusInternalServerError)
-// 			return
-// 		}
-// 		bytes, err := json.Marshal(&request)
-// 		if err != nil {
-// 			http.Error(rw, "Cannot process request", http.StatusInternalServerError)
-// 			return
-// 		}
-// 		conn.Request(req.URL.Path, bytes, 10*time.Millisecond)
-// 		rw.Write(response.Body)
-// 	}
-// 	return handler, nil
-// }

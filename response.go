@@ -19,9 +19,9 @@ func NewResponse() *Response {
 	}
 }
 
-func (r *Response) UnmarshallFrom(requestData []byte) (*Response, error) {
-	if err := json.Unmarshal(requestData, r); err != nil {
-		return nil, err
+func (r *Response) Decode(responseData []byte) error {
+	if err := json.Unmarshal(responseData, r); err != nil {
+		return err
 	}
-	return r, nil
+	return nil
 }
