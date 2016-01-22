@@ -2,9 +2,7 @@ package natsproxy
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"strings"
 
 	"github.com/nats-io/nats"
 )
@@ -58,11 +56,8 @@ func (nc *NatsClient) DELETE(url string, handler NatsHandler) {
 }
 
 func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
-	subscribeUrl := strings.Replace(url, "/", ".", -1)
-	subscribeUrl = fmt.Sprintf("%s:%s", method, subscribeUrl)
-	log.Printf("Subscribing to %s", subscribeUrl)
+	subscribeUrl := URLToNats(method, url)
 	nc.conn.Subscribe(subscribeUrl, func(m *nats.Msg) {
-		log.Println("Received subscription")
 		request := &Request{}
 		if err := request.UnmarshallFrom(m.Data); err != nil {
 			log.Println(err)

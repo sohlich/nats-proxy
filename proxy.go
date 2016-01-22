@@ -3,10 +3,7 @@ package natsproxy
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/nats-io/nats"
@@ -23,27 +20,32 @@ func NewNatsProxy(conn *nats.Conn) *NatsProxy {
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	// Transform the HTTP request to
+	// NATS proxy request.
 	request, err := NewRequestFromHttp(req)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
 
+	// Serialize the request.
 	reqBytes, err := json.Marshal(&request)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Sending to %s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1))
-	msg, respErr := np.conn.Request(fmt.Sprintf("%s:%s", req.Method, strings.Replace(req.URL.Path, "/", ".", -1)),
+
+	// Post request to message queue
+	msg, respErr := np.conn.Request(
+		URLToNats(req.Method, req.URL.Path),
 		reqBytes,
 		10*time.Second)
 	if respErr != nil {
 		http.Error(rw, "No response", http.StatusInternalServerError)
 		return
 	}
-	response := NewResponse()
-	err = response.Decode(msg.Data)
+	var response *Response
+	response, err = DecodeResponse(msg.Data)
 	if err != nil {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
