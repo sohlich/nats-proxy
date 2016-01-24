@@ -16,7 +16,7 @@ func TestProxy(t *testing.T) {
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
 	natsClient := NewNatsClient(clientConn)
-	natsClient.Subscribe("POST", "/test/*", Handler)
+	natsClient.Subscribe("POST", "/test/:event/:session", Handler)
 	// defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats.DefaultURL)
@@ -30,7 +30,7 @@ func TestProxy(t *testing.T) {
 
 	log.Println("Posting request")
 	reader := bytes.NewReader([]byte("testData"))
-	resp, err := http.Post("http://localhost:3000/test/12324", "multipart/form-data", reader)
+	resp, err := http.Post("http://localhost:3000/test/12324/123", "multipart/form-data", reader)
 	if err != nil {
 		log.Println(err)
 		t.Error("Cannot do post")

@@ -56,7 +56,8 @@ func (nc *NatsClient) DELETE(url string, handler NatsHandler) {
 }
 
 func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
-	subscribeUrl := URLToNats(method, url)
+	subscribeUrl := SubscribeUrlToNats(method, url)
+	log.Println(subscribeUrl)
 	nc.conn.Subscribe(subscribeUrl, func(m *nats.Msg) {
 		request := &Request{}
 		if err := request.UnmarshallFrom(m.Data); err != nil {
@@ -64,7 +65,7 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 			return
 		}
 		response := NewResponse()
-		c := newContext(response, request)
+		c := newContext(url, response, request)
 
 		// Iterate through filters
 		for _, filter := range nc.filters {
