@@ -17,12 +17,12 @@ func TestProxy(t *testing.T) {
 	clientConn, _ := nats.Connect(nats.DefaultURL)
 	natsClient := NewNatsClient(clientConn)
 	natsClient.Subscribe("POST", "/test/:event/:session", Handler)
-	// defer clientConn.Close()
+	defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats.DefaultURL)
 	proxyHandler := NewNatsProxy(proxyConn)
 	http.Handle("/", proxyHandler)
-	// defer proxyConn.Close()
+	defer proxyConn.Close()
 
 	log.Println("initializing proxy")
 	go http.ListenAndServe(":3000", nil)
