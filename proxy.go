@@ -3,20 +3,36 @@ package natsproxy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/nats-io/nats"
 )
 
+// NatsProxy serves as a proxy
+// between gnats and http. It automatically
+// translates the HTTP requests to nats
+// messages. The url and method of the HTTP request
+// serves as the name of the nats channel, where
+// the message is sent.
 type NatsProxy struct {
 	conn *nats.Conn
 }
 
-func NewNatsProxy(conn *nats.Conn) *NatsProxy {
+var (
+	ErrNatsClientNotConnected = fmt.Errorf("Client not connected")
+)
+
+// NewNatsProxy creates an
+// initialized NatsProxy
+func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
+	if conn.Status() != nats.CONNECTED {
+		return nil, ErrNatsClientNotConnected
+	}
 	return &NatsProxy{
 		conn,
-	}
+	}, nil
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

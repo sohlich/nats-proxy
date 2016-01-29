@@ -20,7 +20,7 @@ func TestProxy(t *testing.T) {
 	defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats.DefaultURL)
-	proxyHandler := NewNatsProxy(proxyConn)
+	proxyHandler, _ := NewNatsProxy(proxyConn)
 	http.Handle("/", proxyHandler)
 	defer proxyConn.Close()
 
