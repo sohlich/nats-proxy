@@ -21,6 +21,9 @@ type NatsProxy struct {
 }
 
 var (
+	// ErrNatsClientNotConnected is returned
+	// if the natsclient inserted
+	// in NewNatsProxy is not connected.
 	ErrNatsClientNotConnected = fmt.Errorf("Client not connected")
 )
 

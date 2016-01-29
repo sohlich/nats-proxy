@@ -25,11 +25,13 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 
 func NewRequestFromHttp(req *http.Request) (*Request, error) {
 	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(req.Body); err != nil {
-		return nil, err
-	}
-	if err := req.Body.Close(); err != nil {
-		return nil, err
+	if req.Body != nil {
+		if _, err := buf.ReadFrom(req.Body); err != nil {
+			return nil, err
+		}
+		if err := req.Body.Close(); err != nil {
+			return nil, err
+		}
 	}
 
 	request := Request{
