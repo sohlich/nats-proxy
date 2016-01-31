@@ -7,6 +7,8 @@ import (
 	"net/url"
 )
 
+// Request wraps the HTTP request
+// to be processed via pub/sub system.
 type Request struct {
 	URL        string
 	Method     string
@@ -16,6 +18,8 @@ type Request struct {
 	Body       []byte
 }
 
+// UnmarshallFrom unmarshal the request from
+// bytes, that usually come from proxy.
 func (r *Request) UnmarshallFrom(requestData []byte) error {
 	if err := json.Unmarshal(requestData, r); err != nil {
 		return err
@@ -23,7 +27,11 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 	return nil
 }
 
-func NewRequestFromHttp(req *http.Request) (*Request, error) {
+// NewRequestFromHTTP creates
+// the Request struct from
+// regular *http.Request by
+// serialization of main parts of it.
+func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 	var buf bytes.Buffer
 	if req.Body != nil {
 		if _, err := buf.ReadFrom(req.Body); err != nil {

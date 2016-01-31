@@ -12,7 +12,7 @@ import (
 func TestGetSubscribe(t *testing.T) {
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NewNatsClient(clientConn)
+	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.GET("/test", func(c *Context) {
 		fmt.Println("Getting request")
@@ -32,7 +32,7 @@ func TestGetSubscribe(t *testing.T) {
 func TestPostSubscribe(t *testing.T) {
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NewNatsClient(clientConn)
+	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.POST("/test", func(c *Context) {
 		fmt.Println("Getting request")
@@ -51,7 +51,7 @@ func TestPostSubscribe(t *testing.T) {
 
 func TestPutSubscribe(t *testing.T) {
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NewNatsClient(clientConn)
+	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.PUT("/test", func(c *Context) {
 		fmt.Println("Getting request")
@@ -70,7 +70,7 @@ func TestPutSubscribe(t *testing.T) {
 
 func TestDeleteSubscribe(t *testing.T) {
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NewNatsClient(clientConn)
+	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.DELETE("/test", func(c *Context) {
 		fmt.Println("Getting request")

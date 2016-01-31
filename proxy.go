@@ -41,7 +41,7 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Transform the HTTP request to
 	// NATS proxy request.
-	request, err := NewRequestFromHttp(req)
+	request, err := NewRequestFromHTTP(req)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return

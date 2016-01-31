@@ -38,7 +38,7 @@ func TestNewRequestFromHttp(t *testing.T) {
 		URL:    url,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{0xFF, 0xFC})),
 	}
-	req, err := NewRequestFromHttp(httpReq)
+	req, err := NewRequestFromHTTP(httpReq)
 
 	if err != nil {
 		t.Error(err)

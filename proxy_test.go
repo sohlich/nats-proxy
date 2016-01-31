@@ -15,7 +15,7 @@ import (
 func TestProxy(t *testing.T) {
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
-	natsClient := NewNatsClient(clientConn)
+	natsClient, _ := NewNatsClient(clientConn)
 	natsClient.Subscribe("POST", "/test/:event/:session", Handler)
 	defer clientConn.Close()
 

@@ -1,0 +1,19 @@
+sudo: required
+language: go
+go:
+    - tip
+    
+notifications:
+    email: false
+
+services:
+  - docker
+  
+before_install:
+- docker pull apcera/gnatsd
+- docker run -d -p 4222:4222 -p 8333:8333 apcera/gnatsd
+- docker ps -a
+
+install:
+  - go get github.com/nats-io/nats
+  

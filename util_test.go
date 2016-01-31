@@ -8,6 +8,6 @@ import (
 func TestUrlReplace(t *testing.T) {
 	path := "/home/:event/:session/:token"
 	fmt.Println(path)
-	res := SubscribeUrlToNats("POST", path)
+	res := SubscribeURLToNats("POST", path)
 	fmt.Println(res)
 }
