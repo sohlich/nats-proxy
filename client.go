@@ -8,9 +8,13 @@ import (
 )
 
 const (
-	GET    = "GET"
-	POST   = "POST"
-	PUT    = "PUT"
+	// GET method constant
+	GET = "GET"
+	// POST method constant
+	POST = "POST"
+	// PUT method constant
+	PUT = "PUT"
+	// DELETE method constant
 	DELETE = "DELETE"
 )
 
