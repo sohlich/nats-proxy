@@ -30,7 +30,7 @@ func TestProxy(t *testing.T) {
 
 	log.Println("Posting request")
 	reader := bytes.NewReader([]byte("testData"))
-	resp, err := http.Post("http://127.0.0.1:3000/test/12324/123", "multipart/form-data", reader)
+	resp, err := http.Post("http://127.0.0.1:3000/test/12324/123?name=testname", "multipart/form-data", reader)
 	if err != nil {
 		log.Println(err)
 		t.Error("Cannot do post")
