@@ -19,7 +19,7 @@ type Response struct {
 func NewResponse() *Response {
 	return &Response{
 		make(map[string][]string, 0),
-		0,
+		200,
 		make([]byte, 0),
 	}
 }
