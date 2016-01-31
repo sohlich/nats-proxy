@@ -17,7 +17,7 @@ func URLToNats(method string, urlPath string) string {
 	return subURL
 }
 
-func SubscribeUrlToNats(method string, urlPath string) string {
+func SubscribeURLToNats(method string, urlPath string) string {
 	subURL := pathrgxp.ReplaceAllString(urlPath, "*")
 	// subURL = lastpathrgxp.ReplaceAllString(subURL, ".*")
 	subURL = strings.Replace(subURL, "/", ".", -1)
