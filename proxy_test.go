@@ -60,7 +60,6 @@ func Handler(c *Context) {
 		"Radek",
 	}
 
-	bytes, _ := json.Marshal(respStruct)
-	c.Response.Body = bytes
+	c.JSON(200, respStruct)
 	c.Response.Header.Add("X-AUTH", "12345")
 }
