@@ -3,8 +3,11 @@
 [![Build Status](https://travis-ci.org/sohlich/nats-proxy.svg?branch=master)](https://travis-ci.org/sohlich/nats-proxy)
 
 
-This library provides translating the HTTP requests to NATS messaging platform.
+This library provides translation of HTTP requests to NATS messaging platform. 
+Client side is partly inspired by https://github.com/gin-gonic/gin project to process the
+requests.
 
+#### The library is under development but the main API should remain stable.
 
 ### Example usage
 
