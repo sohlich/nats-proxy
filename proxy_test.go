@@ -14,9 +14,25 @@ import (
 
 func TestProxy(t *testing.T) {
 
+	var reqEvent string
+	var reqSession string
+	var reqEmail string
+
 	clientConn, _ := nats.Connect(nats.DefaultURL)
 	natsClient, _ := NewNatsClient(clientConn)
-	natsClient.Subscribe("POST", "/test/:event/:session", Handler)
+	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
+		reqEvent = c.PathVariable("event")
+		reqSession = c.PathVariable("session")
+
+		respStruct := struct {
+			User string
+		}{
+			"Radek",
+		}
+
+		c.JSON(200, respStruct)
+		c.Response.Header.Add("X-AUTH", "12345")
+	})
 	defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats.DefaultURL)
@@ -47,19 +63,8 @@ func TestProxy(t *testing.T) {
 	if respStruct.User != "Radek" {
 		t.Error("Response assertion failed")
 	}
-}
 
-func Handler(c *Context) {
-	log.Println("Getting request")
-	log.Println(c.Request.URL)
-	c.Request.Form.Get("email")
-
-	respStruct := struct {
-		User string
-	}{
-		"Radek",
+	if reqEvent != "12324" {
+		t.Error("Path variable doesn't match")
 	}
-
-	c.JSON(200, respStruct)
-	c.Response.Header.Add("X-AUTH", "12345")
 }
