@@ -16,7 +16,6 @@ func TestProxy(t *testing.T) {
 
 	var reqEvent string
 	var reqSession string
-	var reqEmail string
 
 	clientConn, _ := nats.Connect(nats.DefaultURL)
 	natsClient, _ := NewNatsClient(clientConn)
