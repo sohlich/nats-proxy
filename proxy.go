@@ -5,10 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/nats-io/nats"
 )
+
+var (
+	// ErrNatsClientNotConnected is returned
+	// if the natsclient inserted
+	// in NewNatsProxy is not connected.
+	ErrNatsClientNotConnected = fmt.Errorf("Client not connected")
+)
+
+// HookFunc is the function that is
+// used to modify response just before its
+// transformed to HTTP response
+type HookFunc func(*Response)
 
 // NatsProxy serves as a proxy
 // between gnats and http. It automatically
@@ -17,15 +30,14 @@ import (
 // serves as the name of the nats channel, where
 // the message is sent.
 type NatsProxy struct {
-	conn *nats.Conn
+	conn  *nats.Conn
+	hooks map[string]hookGroup
 }
 
-var (
-	// ErrNatsClientNotConnected is returned
-	// if the natsclient inserted
-	// in NewNatsProxy is not connected.
-	ErrNatsClientNotConnected = fmt.Errorf("Client not connected")
-)
+type hookGroup struct {
+	regexp *regexp.Regexp
+	hooks  []HookFunc
+}
 
 // NewNatsProxy creates an
 // initialized NatsProxy
@@ -35,6 +47,7 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 	}
 	return &NatsProxy{
 		conn,
+		make(map[string]hookGroup, 0),
 	}, nil
 }
 
@@ -69,7 +82,37 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}
+	// Apply hook if regex match
+	for _, hG := range np.hooks {
+		if hG.regexp.MatchString(req.URL.Path) {
+			for _, hook := range hG.hooks {
+				hook(response)
+			}
+		}
+	}
 	writeResponse(rw, response)
+}
+
+// AddHook add the hook to modify,
+// process response just before
+// its transformed to HTTP form.
+func (np *NatsProxy) AddHook(urlRegex string, hook HookFunc) error {
+	hG, ok := np.hooks[urlRegex]
+	if !ok {
+		regexp, err := regexp.Compile(urlRegex)
+		if err != nil {
+			return err
+		}
+		hooks := make([]HookFunc, 1)
+		hooks[0] = hook
+		np.hooks[urlRegex] = hookGroup{
+			regexp,
+			hooks,
+		}
+	} else {
+		hG.hooks = append(hG.hooks, hook)
+	}
+	return nil
 }
 
 func writeResponse(rw http.ResponseWriter, response *Response) {
