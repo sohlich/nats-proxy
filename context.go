@@ -31,6 +31,19 @@ func (c *Context) Abort() {
 	c.abortIndex = c.index
 }
 
+// AbortWithJson aborts the request
+// and sets the HTTP status code to 500.
+func (c *Context) AbortWithJson(obj interface{}){
+	c.abortIndex = c.index
+	c.Response.StatusCode = 500
+	bytes, err := json.Marshal(obj)
+	if err != nil {
+		c.writeError(err)
+	}
+	c.Response.Body = bytes
+}
+
+
 // BindJSON unmarshall the
 // request body to given
 // struct
@@ -68,6 +81,15 @@ func (c *Context) PathVariable(name string) string {
 	}
 	return pathParams[index]
 }
+
+// FormVariable returns the
+// variable from request form if
+// available.
+func (c *Context) FormVariable(name string) string {
+	return c.Request.Form.Get(name)
+}
+
+<
 
 func (c *Context) writeError(err error) {
 	c.Response.StatusCode = 500
