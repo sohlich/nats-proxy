@@ -5,13 +5,24 @@ import (
 	"fmt"
 	"testing"
 	"time"
+    "os"
 
 	"github.com/nats-io/nats"
 )
 
-func TestGetSubscribe(t *testing.T) {
+var nats_url = getTestNatsUrl()
 
-	clientConn, _ := nats.Connect(nats.DefaultURL)
+func getTestNatsUrl() string {
+    natsUrl := os.Getenv("NATS_URL");
+    if(natsUrl == ""){
+        natsUrl = "192.168.99.100:4222"
+    }
+    return fmt.Sprintf("nats://%s",natsUrl)
+}
+
+func TestGetSubscribe(t *testing.T) {
+    
+	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.GET("/test", func(c *Context) {
@@ -19,7 +30,7 @@ func TestGetSubscribe(t *testing.T) {
 		c.JSON(200, "OK")
 	})
 
-	testClient, _ := nats.Connect(nats.DefaultURL)
+	testClient, _ := nats.Connect(nats_url)
 	defer testClient.Close()
 	r := &Request{}
 	data, _ := json.Marshal(r)
@@ -31,7 +42,7 @@ func TestGetSubscribe(t *testing.T) {
 
 func TestPostSubscribe(t *testing.T) {
 
-	clientConn, _ := nats.Connect(nats.DefaultURL)
+	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.POST("/test", func(c *Context) {
@@ -39,7 +50,7 @@ func TestPostSubscribe(t *testing.T) {
 		c.JSON(200, "OK")
 	})
 
-	testClient, _ := nats.Connect(nats.DefaultURL)
+	testClient, _ := nats.Connect(nats_url)
 	defer testClient.Close()
 	r := &Request{}
 	data, _ := json.Marshal(r)
@@ -50,7 +61,7 @@ func TestPostSubscribe(t *testing.T) {
 }
 
 func TestPutSubscribe(t *testing.T) {
-	clientConn, _ := nats.Connect(nats.DefaultURL)
+	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.PUT("/test", func(c *Context) {
@@ -58,7 +69,7 @@ func TestPutSubscribe(t *testing.T) {
 		c.JSON(200, "OK")
 	})
 
-	testClient, _ := nats.Connect(nats.DefaultURL)
+	testClient, _ := nats.Connect(nats_url)
 	defer testClient.Close()
 	r := &Request{}
 	data, _ := json.Marshal(r)
@@ -69,7 +80,7 @@ func TestPutSubscribe(t *testing.T) {
 }
 
 func TestDeleteSubscribe(t *testing.T) {
-	clientConn, _ := nats.Connect(nats.DefaultURL)
+	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.DELETE("/test", func(c *Context) {
@@ -77,7 +88,7 @@ func TestDeleteSubscribe(t *testing.T) {
 		c.JSON(200, "OK")
 	})
 
-	testClient, _ := nats.Connect(nats.DefaultURL)
+	testClient, _ := nats.Connect(nats_url)
 	defer testClient.Close()
 	r := &Request{}
 	data, _ := json.Marshal(r)

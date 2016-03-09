@@ -17,7 +17,7 @@ func TestProxy(t *testing.T) {
 	var reqEvent string
 	var reqSession string
 
-	clientConn, _ := nats.Connect(nats.DefaultURL)
+	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
 		reqEvent = c.PathVariable("event")
@@ -34,7 +34,7 @@ func TestProxy(t *testing.T) {
 	})
 	defer clientConn.Close()
 
-	proxyConn, _ := nats.Connect(nats.DefaultURL)
+	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
 	http.Handle("/", proxyHandler)
 	defer proxyConn.Close()
