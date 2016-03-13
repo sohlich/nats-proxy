@@ -3,9 +3,9 @@ package natsproxy
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
-    "os"
 
 	"github.com/nats-io/nats"
 )
@@ -13,15 +13,16 @@ import (
 var nats_url = getTestNatsUrl()
 
 func getTestNatsUrl() string {
-    natsUrl := os.Getenv("NATS_URL");
-    if(natsUrl == ""){
-        natsUrl = "192.168.99.100:4222"
-    }
-    return fmt.Sprintf("nats://%s",natsUrl)
+
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL == "" {
+		natsURL = "192.168.99.100:4222"
+	}
+	return fmt.Sprintf("nats://%s", natsURL)
 }
 
 func TestGetSubscribe(t *testing.T) {
-    
+
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
