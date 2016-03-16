@@ -6,6 +6,7 @@
 
 
 
+
 This library provides translation of HTTP requests to NATS messaging platform. 
 Client side is partly inspired by https://github.com/gin-gonic/gin project to process the
 requests.
