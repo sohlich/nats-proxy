@@ -1,0 +1,33 @@
+message FormItem{
+     optional string key = 1;
+     repeated string value = 2;
+}
+
+message FormMap {
+     repeated FormItem items = 1;
+}
+
+message HeaderItem{
+     optional string key = 1;
+     repeated string value = 2;
+}
+
+message HeaderMap {
+     repeated HeaderItem items = 1;
+}
+
+
+message Request {
+  optional string URL = 1;
+  optional string Method = 2;
+  optional string RemoteAddr = 3;
+  optional bytes Body = 4;
+  optional FormMap Form = 5;
+  optional HeaderMap Header = 6;
+}
+
+message Response {
+  optional int32 StatusCode = 1;
+  optional HeaderMap Header = 2;
+  optional bytes Body = 3;
+}

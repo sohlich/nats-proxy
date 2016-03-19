@@ -2,26 +2,15 @@ package natsproxy
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
-	"net/url"
-)
 
-// Request wraps the HTTP request
-// to be processed via pub/sub system.
-type Request struct {
-	URL        string
-	Method     string
-	Header     http.Header
-	Form       url.Values
-	RemoteAddr string
-	Body       []byte
-}
+	"github.com/gogo/protobuf/proto"
+)
 
 // UnmarshallFrom unmarshal the request from
 // bytes, that usually come from proxy.
 func (r *Request) UnmarshallFrom(requestData []byte) error {
-	if err := json.Unmarshal(requestData, r); err != nil {
+	if err := proto.Unmarshal(requestData, r); err != nil {
 		return err
 	}
 	return nil
@@ -42,12 +31,41 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 		}
 	}
 
+	URL := req.URL.String()
+
+	headerMap := HeaderMap{
+		Items: make([]*HeaderItem, len(req.Header)),
+	}
+
+	// TODO simplify
+	index := 0
+	for k, v := range req.Header {
+		headerMap.Items[index] = &HeaderItem{
+			Key:   &k,
+			Value: v,
+		}
+		index++
+	}
+
+	formMap := FormMap{
+		Items: make([]*FormItem, len(req.Form)),
+	}
+
+	index = 0
+	for k, v := range req.Form {
+		formMap.Items[index] = &FormItem{
+			Key:   &k,
+			Value: v,
+		}
+		index++
+	}
+
 	request := Request{
-		URL:        req.URL.String(),
-		Method:     req.Method,
-		Header:     req.Header,
-		Form:       req.Form,
-		RemoteAddr: req.RemoteAddr,
+		URL:        &URL,
+		Method:     &req.Method,
+		Header:     &headerMap,
+		Form:       &formMap,
+		RemoteAddr: &req.RemoteAddr,
 		Body:       buf.Bytes(),
 	}
 	return &request, nil

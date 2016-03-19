@@ -3,8 +3,11 @@ package natsproxy
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+var queryRemoveRegex = regexp.MustCompile("[?]{1}.*")
 
 // Context wraps the
 // processed request/response
@@ -34,13 +37,8 @@ func (c *Context) Abort() {
 // AbortWithJson aborts the request
 // and sets the HTTP status code to 500.
 func (c *Context) AbortWithJson(obj interface{}) {
-	c.abortIndex = c.index
-	c.Response.StatusCode = 500
-	bytes, err := json.Marshal(obj)
-	if err != nil {
-		c.writeError(err)
-	}
-	c.Response.Body = bytes
+	c.Abort()
+	c.JSON(500, obj)
 }
 
 // BindJSON unmarshall the
@@ -56,7 +54,8 @@ func (c *Context) BindJSON(obj interface{}) error {
 // JSON writes the serialized
 // json to response
 func (c *Context) JSON(statusCode int, obj interface{}) {
-	c.Response.StatusCode = statusCode
+	sC := int32(statusCode)
+	c.Response.StatusCode = &sC
 	bytes, err := json.Marshal(obj)
 	if err != nil {
 		c.writeError(err)
@@ -70,7 +69,8 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 // based on its name (:xxx) defined
 // in subscription URL
 func (c *Context) PathVariable(name string) string {
-	pathParams := strings.Split(c.Request.URL, "/")
+	url := queryRemoveRegex.ReplaceAllString(c.Request.GetURL(), "")
+	pathParams := strings.Split(url, "/")
 	index, ok := c.params[name]
 	if !ok {
 		return ""
@@ -85,11 +85,17 @@ func (c *Context) PathVariable(name string) string {
 // variable from request form if
 // available.
 func (c *Context) FormVariable(name string) string {
-	return c.Request.Form.Get(name)
+	for _, it := range c.Request.Form.GetItems() {
+		if *it.Key == name {
+			return it.Value[0]
+		}
+	}
+	return ""
 }
 
 func (c *Context) writeError(err error) {
-	c.Response.StatusCode = 500
+	status := int32(500)
+	c.Response.StatusCode = &status
 	c.Response.Body = []byte(err.Error())
 }
 

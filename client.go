@@ -1,9 +1,9 @@
 package natsproxy
 
 import (
-	"encoding/json"
 	"log"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats"
 )
 
@@ -114,7 +114,7 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 		if !c.IsAborted() {
 			handler(c)
 		}
-		bytes, err := json.Marshal(c.Response)
+		bytes, err := proto.Marshal(c.Response)
 		if err != nil {
 			log.Println(err)
 			return

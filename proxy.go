@@ -2,12 +2,12 @@ package natsproxy
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats"
 )
 
@@ -61,7 +61,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Serialize the request.
-	reqBytes, err := json.Marshal(&request)
+	reqBytes, err := proto.Marshal(request)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
@@ -121,7 +121,7 @@ func writeResponse(rw http.ResponseWriter, response *Response) {
 	copyHeader(response.Header, rw.Header())
 
 	// Write the response code
-	rw.WriteHeader(response.StatusCode)
+	rw.WriteHeader(int(response.GetStatusCode()))
 
 	// Write the bytes of response
 	// to a response writer.
@@ -129,10 +129,10 @@ func writeResponse(rw http.ResponseWriter, response *Response) {
 	bytes.NewBuffer(response.Body).WriteTo(rw)
 }
 
-func copyHeader(src, dst http.Header) {
-	for k, v := range src {
-		for _, val := range v {
-			dst.Add(k, val)
+func copyHeader(src *HeaderMap, dst http.Header) {
+	for _, it := range src.Items {
+		for _, val := range it.GetValue() {
+			dst.Add(it.GetKey(), val)
 		}
 	}
 }

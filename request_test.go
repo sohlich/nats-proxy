@@ -2,26 +2,30 @@ package natsproxy
 
 import (
 	"bytes"
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 func TestUnmarshallFrom(t *testing.T) {
+	URL := "/api/method"
 	original := &Request{
-		URL:  "/api/method",
+		URL:  &URL,
 		Body: []byte{0xFF, 0xFC},
 	}
-	payload, _ := json.Marshal(original)
+	payload, _ := proto.Marshal(original)
 
 	copyObj := &Request{}
 	if err := copyObj.UnmarshallFrom(payload); err != nil {
 		t.Error(err)
 	}
 
-	if original.URL != copyObj.URL {
+	if original.GetURL() != copyObj.GetURL() {
+		fmt.Println()
 		t.Error("URL not equals")
 	}
 
@@ -43,8 +47,7 @@ func TestNewRequestFromHttp(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	if req.URL != "http://test.com/test" {
+	if *req.URL != "http://test.com/test" {
 		t.Error("Url not equals")
 	}
 	// TODO better test for Body

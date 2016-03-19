@@ -3,6 +3,7 @@ package natsproxy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -23,6 +24,17 @@ func TestProxy(t *testing.T) {
 		reqEvent = c.PathVariable("event")
 		reqSession = c.PathVariable("session")
 
+		fmt.Println(c.Request.GetURL())
+		if reqEvent != "12324" {
+			fmt.Println(reqEvent)
+			t.Error("Event path variable assertion failed")
+		}
+
+		if reqSession != "123" {
+			fmt.Println(reqSession)
+			t.Error("Session path variable assertion failed")
+		}
+
 		respStruct := struct {
 			User string
 		}{
@@ -30,7 +42,15 @@ func TestProxy(t *testing.T) {
 		}
 
 		c.JSON(200, respStruct)
-		c.Response.Header.Add("X-AUTH", "12345")
+		headerKey := "X-AUTH"
+		c.Response.Header = &HeaderMap{
+			Items: []*HeaderItem{
+				&HeaderItem{
+					Key:   &headerKey,
+					Value: []string{"12345"},
+				},
+			},
+		}
 	})
 	defer clientConn.Close()
 
