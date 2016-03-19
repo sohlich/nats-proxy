@@ -3,8 +3,11 @@ package natsproxy
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+var removeQueryRxp = regexp.MustCompile("[?]{1}.*")
 
 // Context wraps the
 // processed request/response
@@ -34,13 +37,8 @@ func (c *Context) Abort() {
 // AbortWithJson aborts the request
 // and sets the HTTP status code to 500.
 func (c *Context) AbortWithJson(obj interface{}) {
-	c.abortIndex = c.index
-	c.Response.StatusCode = 500
-	bytes, err := json.Marshal(obj)
-	if err != nil {
-		c.writeError(err)
-	}
-	c.Response.Body = bytes
+	c.Abort()
+	c.JSON(500, obj)
 }
 
 // BindJSON unmarshall the
@@ -70,7 +68,9 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 // based on its name (:xxx) defined
 // in subscription URL
 func (c *Context) PathVariable(name string) string {
-	pathParams := strings.Split(c.Request.URL, "/")
+	URL := removeQueryRxp.ReplaceAllString(c.Request.URL, "")
+	pathParams := strings.Split(URL, "/")
+
 	index, ok := c.params[name]
 	if !ok {
 		return ""

@@ -11,7 +11,12 @@ func TestPathVariable(t *testing.T) {
 
 	tkn := ctx.PathVariable("token")
 	if tkn != "1234" {
-		t.Error("Defined path variable returned empty string")
+		t.Error("Defined path variable assertion failed")
+	}
+
+	session := ctx.PathVariable("session")
+	if session != "tst" {
+		t.Error("Defined path variable assertion failed")
 	}
 
 	unknwn := ctx.PathVariable("novalue")
