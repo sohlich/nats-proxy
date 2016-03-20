@@ -8,8 +8,8 @@ func NewResponse() *Response {
 	status := int32(200)
 	return &Response{
 		StatusCode: &status,
-		Header: &HeaderMap{
-			Items: make([]*HeaderItem, 0),
+		Header: &Values{
+			Items: make([]*Value, 0),
 		},
 		Body: make([]byte, 0),
 	}

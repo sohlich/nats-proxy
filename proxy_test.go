@@ -1,12 +1,12 @@
 package natsproxy
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +24,11 @@ func TestProxy(t *testing.T) {
 		reqEvent = c.PathVariable("event")
 		reqSession = c.PathVariable("session")
 
+		// Assert method
+		if c.Request.GetMethod() != "POST" {
+			t.Error("Method assertion failed")
+		}
+
 		if reqEvent != "12324" {
 			fmt.Println(reqEvent)
 			t.Error("Event path variable assertion failed")
@@ -37,7 +42,6 @@ func TestProxy(t *testing.T) {
 
 		constainsXAuth := false
 		for _, v := range c.Request.GetHeader().GetItems() {
-			fmt.Printf("Key: %s Value: %s", v.GetKey(), v.GetValue())
 			if v.GetKey() == "X-Auth" {
 				constainsXAuth = true
 			}
@@ -47,12 +51,23 @@ func TestProxy(t *testing.T) {
 			t.Error("Header assertion failed")
 		}
 
+		k1 := false
+		for _, v := range c.Request.GetForm().GetItems() {
+			if v.GetKey() == "both" {
+				k1 = true
+			}
+		}
+
+		if !k1 {
+			t.Error("Form assertion failed")
+		}
+
 		// Generate response
 		c.JSON(200, respStruct)
 		headerKey := "X-Auth"
-		c.Response.Header = &HeaderMap{
-			Items: []*HeaderItem{
-				&HeaderItem{
+		c.Response.Header = &Values{
+			Items: []*Value{
+				&Value{
 					Key:   &headerKey,
 					Value: []string{"12345"},
 				},
@@ -71,12 +86,12 @@ func TestProxy(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	log.Println("Posting request")
-	reader := bytes.NewReader([]byte("testData"))
-
 	client := &http.Client{}
 
+	reader := strings.NewReader("z=post&both=y&prio=2&empty=")
 	req, err := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
-	req.Header.Add("X-AUTH", "xauthpayload")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+	req.Header.Set("X-AUTH", "xauthpayload")
 
 	resp, err := client.Do(req)
 	if err != nil {

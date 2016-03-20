@@ -129,7 +129,7 @@ func writeResponse(rw http.ResponseWriter, response *Response) {
 	bytes.NewBuffer(response.Body).WriteTo(rw)
 }
 
-func copyHeader(src *HeaderMap, dst http.Header) {
+func copyHeader(src *Values, dst http.Header) {
 	for _, it := range src.Items {
 		for _, val := range it.GetValue() {
 			dst.Add(it.GetKey(), val)
