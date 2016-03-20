@@ -37,11 +37,11 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 		Items: make([]*HeaderItem, len(req.Header)),
 	}
 
-	// TODO simplify
 	index := 0
 	for k, v := range req.Header {
+		key := k // Needed to copy the adress of string
 		headerMap.Items[index] = &HeaderItem{
-			Key:   &k,
+			Key:   &key,
 			Value: v,
 		}
 		index++
@@ -53,8 +53,9 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 
 	index = 0
 	for k, v := range req.Form {
+		key := k // Needed to copy the adress of string
 		formMap.Items[index] = &FormItem{
-			Key:   &k,
+			Key:   &key,
 			Value: v,
 		}
 		index++

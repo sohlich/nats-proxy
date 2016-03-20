@@ -24,15 +24,9 @@ func TestProxy(t *testing.T) {
 		reqEvent = c.PathVariable("event")
 		reqSession = c.PathVariable("session")
 
-		fmt.Println(c.Request.GetURL())
 		if reqEvent != "12324" {
 			fmt.Println(reqEvent)
 			t.Error("Event path variable assertion failed")
-		}
-
-		if reqSession != "123" {
-			fmt.Println(reqSession)
-			t.Error("Session path variable assertion failed")
 		}
 
 		respStruct := struct {
@@ -41,8 +35,21 @@ func TestProxy(t *testing.T) {
 			"Radek",
 		}
 
+		constainsXAuth := false
+		for _, v := range c.Request.GetHeader().GetItems() {
+			fmt.Printf("Key: %s Value: %s", v.GetKey(), v.GetValue())
+			if v.GetKey() == "X-Auth" {
+				constainsXAuth = true
+			}
+		}
+
+		if !constainsXAuth {
+			t.Error("Header assertion failed")
+		}
+
+		// Generate response
 		c.JSON(200, respStruct)
-		headerKey := "X-AUTH"
+		headerKey := "X-Auth"
 		c.Response.Header = &HeaderMap{
 			Items: []*HeaderItem{
 				&HeaderItem{
@@ -65,7 +72,13 @@ func TestProxy(t *testing.T) {
 
 	log.Println("Posting request")
 	reader := bytes.NewReader([]byte("testData"))
-	resp, err := http.Post("http://127.0.0.1:3000/test/12324/123?name=testname", "multipart/form-data", reader)
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
+	req.Header.Add("X-AUTH", "xauthpayload")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
 		t.Error("Cannot do post")
