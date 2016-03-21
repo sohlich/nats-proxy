@@ -1,11 +1,11 @@
 package natsproxy
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -22,6 +22,16 @@ func TestProxy(t *testing.T) {
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
 		reqEvent = c.PathVariable("event")
 		reqSession = c.PathVariable("session")
+
+		nameVal := c.Request.Form.Get("name")
+		if nameVal != "testname" {
+			t.Error("Form value assertion failed")
+		}
+
+		nameVal = c.Request.Form.Get("post")
+		if nameVal != "postval" {
+			t.Error("Form value assertion failed")
+		}
 
 		respStruct := struct {
 			User string
@@ -44,8 +54,10 @@ func TestProxy(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	log.Println("Posting request")
-	reader := bytes.NewReader([]byte("testData"))
-	resp, err := http.Post("http://127.0.0.1:3000/test/12324/123?name=testname", "multipart/form-data", reader)
+	resp, err := http.PostForm("http://127.0.0.1:3000/test/12324/123?name=testname",
+		url.Values{
+			"post": []string{"postval"},
+		})
 	if err != nil {
 		log.Println(err)
 		t.Error("Cannot do post")

@@ -34,6 +34,9 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 	var buf bytes.Buffer
 	if req.Body != nil {
+		if err := req.ParseForm(); err != nil {
+			return nil, err
+		}
 		if _, err := buf.ReadFrom(req.Body); err != nil {
 			return nil, err
 		}
