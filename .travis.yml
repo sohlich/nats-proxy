@@ -17,4 +17,4 @@ before_install:
 install:
   - go get github.com/nats-io/nats
   - go get github.com/gogo/protobuf/proto
-  
+  - go get github.com/golang/protobuf/proto
