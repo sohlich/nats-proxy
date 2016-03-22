@@ -83,9 +83,19 @@ func (c *Context) PathVariable(name string) string {
 
 // FormVariable returns the
 // variable from request form if
-// available.
+// available or empty string if not present.
 func (c *Context) FormVariable(name string) string {
-	for _, it := range c.Request.Form.GetItems() {
+	return getVal(name, c.Request.Form)
+}
+
+// HeaderVariable returns the header variable
+// if avalable or empty string if header not present.
+func (c *Context) HeaderVariable(name string) string {
+	return getVal(name, c.Request.Header)
+}
+
+func getVal(name string, vals *Values) string {
+	for _, it := range vals.GetItems() {
 		if *it.Key == name {
 			return it.Value[0]
 		}
