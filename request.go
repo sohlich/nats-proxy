@@ -23,9 +23,9 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 	var buf bytes.Buffer
 	if req.Body != nil {
-		if err := req.ParseForm(); err != nil {
-			return nil, err
-		}
+		// if err := req.ParseForm(); err != nil {
+		// 	return nil, err
+		// }
 		if _, err := buf.ReadFrom(req.Body); err != nil {
 			return nil, err
 		}
@@ -37,13 +37,13 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 	URL := req.URL.String()
 
 	headerMap := copyMap(map[string][]string(req.Header))
-	formMap := copyMap(map[string][]string(req.Form))
+	// formMap := copyMap(map[string][]string(req.Form))
 
 	request := Request{
-		URL:        &URL,
-		Method:     &req.Method,
-		Header:     headerMap,
-		Form:       formMap,
+		URL:    &URL,
+		Method: &req.Method,
+		Header: headerMap,
+		// Form:       formMap,
 		RemoteAddr: &req.RemoteAddr,
 		Body:       buf.Bytes(),
 	}

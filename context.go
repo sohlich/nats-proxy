@@ -1,8 +1,14 @@
 package natsproxy
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -12,11 +18,12 @@ var queryRemoveRegex = regexp.MustCompile("[?]{1}.*")
 // Context wraps the
 // processed request/response
 type Context struct {
-	Request    *Request
-	Response   *Response
-	index      int
-	abortIndex int
-	params     map[string]int
+	Request     *Request
+	Response    *Response
+	RequestForm url.Values
+	index       int
+	abortIndex  int
+	params      map[string]int
 }
 
 // IsAborted returns true
@@ -85,7 +92,7 @@ func (c *Context) PathVariable(name string) string {
 // variable from request form if
 // available or empty string if not present.
 func (c *Context) FormVariable(name string) string {
-	return getVal(name, c.Request.Form)
+	return c.RequestForm.Get(name)
 }
 
 // HeaderVariable returns the header variable
@@ -103,6 +110,93 @@ func getVal(name string, vals *Values) string {
 	return ""
 }
 
+// ParseForm parses the request
+// to values in RequestForm of the
+// Context. The parsed form also includes
+// the parameters from query and from body.
+// Same as the http.Request, the post params
+// are prior the query.
+func (c *Context) ParseForm() error {
+	var err error
+	r := c.Request
+
+	// Parse the url query first
+	queryForm, err := url.ParseQuery(r.GetURL())
+
+	// Parse the post form
+	var postFrom url.Values
+	if r.GetMethod() == "POST" || r.GetMethod() == "PUT" || r.GetMethod() == "PATCH" {
+		postFrom, err = parseForm(r, c.HeaderVariable("Content-Type"))
+	}
+
+	// Merge form values
+	// if post not empty
+	if postFrom != nil {
+		c.RequestForm = mergeValues(queryForm, postFrom)
+	} else {
+		c.RequestForm = queryForm
+	}
+	return err
+}
+
+func parseForm(r *Request, header string) (url.Values, error) {
+	var err error
+	if r.Body == nil {
+		return nil, errors.New("nats-proxy: missing request body")
+	}
+	ct := header
+	// RFC 2616, section 7.2.1 - empty type
+	// SHOULD be treated as application/octet-stream
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	ct, _, err = mime.ParseMediaType(ct)
+	if ct == "application/x-www-form-urlencoded" {
+		var reader io.Reader = bytes.NewReader(r.Body)
+		// 10 MB size limit
+		maxFormSize := int64(10 << 20)
+		reader = io.LimitReader(reader, maxFormSize+1)
+		b, e := ioutil.ReadAll(reader)
+		if e != nil {
+			if err == nil {
+				err = e
+			}
+			return nil, err
+		}
+		if int64(len(b)) > maxFormSize {
+			return nil, errors.New("nats-proxy: POST too large")
+		}
+		vs, e := url.ParseQuery(string(b))
+		if err == nil {
+			err = e
+		}
+		return vs, nil
+	}
+
+	return nil, errors.New("nats-proxy: parseFrom multipart/form-data and others not supported")
+}
+
+// mergeValues the values
+// with post values priority.
+// So if the query param contains
+// same param as the post
+// form in body the param and value from
+// request body will be included in parsed form.
+func mergeValues(query, post url.Values) url.Values {
+	merged := make(url.Values, 0)
+	for key, val := range query {
+		if len(val) > 0 {
+			merged.Set(key, val[0])
+		}
+	}
+	for key, val := range post {
+		if len(val) > 0 {
+			merged.Set(key, val[0])
+		}
+	}
+	return merged
+}
+
 func (c *Context) writeError(err error) {
 	status := int32(500)
 	c.Response.StatusCode = &status
@@ -114,6 +208,7 @@ func newContext(url string, res *Response, req *Request) *Context {
 	return &Context{
 		req,
 		res,
+		nil,
 		0,
 		1<<31 - 1,
 		m,

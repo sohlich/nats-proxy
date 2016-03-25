@@ -51,14 +51,10 @@ func TestProxy(t *testing.T) {
 			t.Error("Header assertion failed")
 		}
 
-		k1 := false
-		for _, v := range c.Request.GetForm().GetItems() {
-			if v.GetKey() == "both" {
-				k1 = true
-			}
-		}
+		c.ParseForm()
+		formVal := c.FormVariable("both")
 
-		if !k1 {
+		if formVal != "y" {
 			t.Error("Form assertion failed")
 		}
 
