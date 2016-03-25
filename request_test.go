@@ -52,3 +52,19 @@ func TestNewRequestFromHttp(t *testing.T) {
 		t.Error("Body length not equals")
 	}
 }
+
+func BenchmarkMarshallRequest(b *testing.B) {
+	b.StopTimer()
+	url, _ := url.Parse("http://test.com/test")
+	httpReq := &http.Request{
+		Method: "GET",
+		URL:    url,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte{0xFF, 0xFC})),
+	}
+	req, _ := NewRequestFromHTTP(httpReq)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		json.Marshal(req)
+	}
+
+}

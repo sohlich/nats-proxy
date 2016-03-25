@@ -22,12 +22,10 @@ func getTestNatsUrl() string {
 }
 
 func TestGetSubscribe(t *testing.T) {
-
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.GET("/test", func(c *Context) {
-		fmt.Println("Getting request")
 		c.JSON(200, "OK")
 	})
 
@@ -47,7 +45,6 @@ func TestPostSubscribe(t *testing.T) {
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.POST("/test", func(c *Context) {
-		fmt.Println("Getting request")
 		c.JSON(200, "OK")
 	})
 
@@ -66,7 +63,6 @@ func TestPutSubscribe(t *testing.T) {
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.PUT("/test", func(c *Context) {
-		fmt.Println("Getting request")
 		c.JSON(200, "OK")
 	})
 
@@ -85,7 +81,6 @@ func TestDeleteSubscribe(t *testing.T) {
 	natsClient, _ := NewNatsClient(clientConn)
 	defer clientConn.Close()
 	natsClient.DELETE("/test", func(c *Context) {
-		fmt.Println("Getting request")
 		c.JSON(200, "OK")
 	})
 
