@@ -67,7 +67,7 @@ func loginHook(resp *natsproxy.Response) {
 }
 ```
 
-### Client middleware
+#### Client middleware
 
 The client middleware feature is inspired by gin framework.
 Context could be processed before it is processed by specific handler.
