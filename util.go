@@ -28,3 +28,15 @@ func SubscribeURLToNats(method string, urlPath string) string {
 	subURL = fmt.Sprintf("%s:%s", method, subURL)
 	return subURL
 }
+
+// copy the values into protocol buffer
+// struct
+func copyMap(values map[string][]string) map[string]*Values {
+	headerMap := make(map[string]*Values, 0)
+	for k, v := range values {
+		headerMap[k] = &Values{
+			v,
+		}
+	}
+	return headerMap
+}

@@ -91,7 +91,11 @@ func (c *Context) PathVariable(name string) string {
 // variable from request form if
 // available or empty string if not present.
 func (c *Context) FormVariable(name string) string {
-	return c.RequestForm.Get(name)
+	arr := c.Request.Form[name]
+	if len(arr.Arr) > 0 {
+		return arr.Arr[0]
+	}
+	return ""
 }
 
 // HeaderVariable returns the header variable
@@ -131,11 +135,13 @@ func (c *Context) ParseForm() error {
 
 	// Merge form values
 	// if post not empty
+	var form url.Values
 	if postFrom != nil {
-		c.RequestForm = mergeValues(queryForm, postFrom)
+		form = mergeValues(queryForm, postFrom)
 	} else {
-		c.RequestForm = queryForm
+		form = queryForm
 	}
+	c.Request.Form = copyMap(form)
 	return err
 }
 
