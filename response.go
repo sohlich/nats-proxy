@@ -5,13 +5,10 @@ import "github.com/gogo/protobuf/proto"
 // NewResponse creates blank
 // initialized Response object.
 func NewResponse() *Response {
-	status := int32(200)
 	return &Response{
-		StatusCode: &status,
-		Header: &Values{
-			Items: make([]*Value, 0),
-		},
-		Body: make([]byte, 0),
+		StatusCode: int32(200),
+		Header:     make(map[string]*Values, 0),
+		Body:       make([]byte, 0),
 	}
 }
 

@@ -14,7 +14,7 @@ import (
 func TestUnmarshallFrom(t *testing.T) {
 	URL := "/api/method"
 	original := &Request{
-		URL:  &URL,
+		URL:  URL,
 		Body: []byte{0xFF, 0xFC},
 	}
 	payload, _ := proto.Marshal(original)
@@ -24,7 +24,7 @@ func TestUnmarshallFrom(t *testing.T) {
 		t.Error(err)
 	}
 
-	if original.GetURL() != copyObj.GetURL() {
+	if original.URL != copyObj.URL {
 		fmt.Println()
 		t.Error("URL not equals")
 	}
@@ -47,7 +47,7 @@ func TestNewRequestFromHttp(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if *req.URL != "http://test.com/test" {
+	if req.URL != "http://test.com/test" {
 		t.Error("Url not equals")
 	}
 	// TODO better test for Body

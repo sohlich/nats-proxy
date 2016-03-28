@@ -1,11 +1,16 @@
 package natsproxy
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +30,7 @@ func TestProxy(t *testing.T) {
 		reqSession = c.PathVariable("session")
 
 		// Assert method
-		if c.Request.GetMethod() != "POST" {
+		if c.Request.Method != "POST" {
 			t.Error("Method assertion failed")
 		}
 
@@ -40,15 +45,10 @@ func TestProxy(t *testing.T) {
 			"Radek",
 		}
 
-		constainsXAuth := false
-		for _, v := range c.Request.GetHeader().GetItems() {
-			if v.GetKey() == "X-Auth" {
-				constainsXAuth = true
+		if v, ok := c.Request.Header["X-Auth"]; ok {
+			if len(v.Arr) == 0 || v.Arr[0] != "xauthpayload" {
+				t.Error("Header assertion failed")
 			}
-		}
-
-		if !constainsXAuth {
-			t.Error("Header assertion failed")
 		}
 
 		c.ParseForm()
@@ -60,15 +60,7 @@ func TestProxy(t *testing.T) {
 
 		// Generate response
 		c.JSON(200, respStruct)
-		headerKey := "X-Auth"
-		c.Response.Header = &Values{
-			Items: []*Value{
-				&Value{
-					Key:   &headerKey,
-					Value: []string{"12345"},
-				},
-			},
-		}
+		c.Response.Header = map[string]*Values{"X-Auth": &Values{[]string{"12345"}}}
 	})
 	defer clientConn.Close()
 
@@ -110,4 +102,31 @@ func TestProxy(t *testing.T) {
 	if reqEvent != "12324" {
 		t.Error("Path variable doesn't match")
 	}
+}
+
+// Creates a new file upload http request with optional extra params
+func newfileUploadRequest(uri string, params map[string]string, paramName, path string) (*http.Request, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(paramName, filepath.Base(path))
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+
+	for key, val := range params {
+		_ = writer.WriteField(key, val)
+	}
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return http.NewRequest("POST", uri, body)
 }

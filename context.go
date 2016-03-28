@@ -61,8 +61,7 @@ func (c *Context) BindJSON(obj interface{}) error {
 // JSON writes the serialized
 // json to response
 func (c *Context) JSON(statusCode int, obj interface{}) {
-	sC := int32(statusCode)
-	c.Response.StatusCode = &sC
+	c.Response.StatusCode = int32(statusCode)
 	bytes, err := json.Marshal(obj)
 	if err != nil {
 		c.writeError(err)
@@ -76,7 +75,7 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 // based on its name (:xxx) defined
 // in subscription URL
 func (c *Context) PathVariable(name string) string {
-	url := queryRemoveRegex.ReplaceAllString(c.Request.GetURL(), "")
+	url := queryRemoveRegex.ReplaceAllString(c.Request.URL, "")
 	pathParams := strings.Split(url, "/")
 	index, ok := c.params[name]
 	if !ok {
@@ -101,10 +100,10 @@ func (c *Context) HeaderVariable(name string) string {
 	return getVal(name, c.Request.Header)
 }
 
-func getVal(name string, vals *Values) string {
-	for _, it := range vals.GetItems() {
-		if *it.Key == name {
-			return it.Value[0]
+func getVal(name string, vals map[string]*Values) string {
+	if val, ok := vals[name]; ok {
+		if len(val.Arr) > 0 {
+			return val.Arr[0]
 		}
 	}
 	return ""
@@ -121,11 +120,12 @@ func (c *Context) ParseForm() error {
 	r := c.Request
 
 	// Parse the url query first
-	queryForm, err := url.ParseQuery(r.GetURL())
+	queryForm, err := url.ParseQuery(r.URL)
 
 	// Parse the post form
 	var postFrom url.Values
-	if r.GetMethod() == "POST" || r.GetMethod() == "PUT" || r.GetMethod() == "PATCH" {
+	method := r.Method
+	if method == "POST" || method == "PUT" || method == "PATCH" {
 		postFrom, err = parseForm(r, c.HeaderVariable("Content-Type"))
 	}
 
@@ -145,6 +145,7 @@ func parseForm(r *Request, header string) (url.Values, error) {
 		return nil, errors.New("nats-proxy: missing request body")
 	}
 	ct := header
+
 	// RFC 2616, section 7.2.1 - empty type
 	// SHOULD be treated as application/octet-stream
 	if ct == "" {
@@ -198,8 +199,7 @@ func mergeValues(query, post url.Values) url.Values {
 }
 
 func (c *Context) writeError(err error) {
-	status := int32(500)
-	c.Response.StatusCode = &status
+	c.Response.StatusCode = int32(500)
 	c.Response.Body = []byte(err.Error())
 }
 

@@ -34,17 +34,12 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 		}
 	}
 
-	URL := req.URL.String()
-
 	headerMap := copyMap(map[string][]string(req.Header))
-	// formMap := copyMap(map[string][]string(req.Form))
-
 	request := Request{
-		URL:    &URL,
-		Method: &req.Method,
-		Header: headerMap,
-		// Form:       formMap,
-		RemoteAddr: &req.RemoteAddr,
+		URL:        req.URL.String(),
+		Method:     req.Method,
+		Header:     headerMap,
+		RemoteAddr: req.RemoteAddr,
 		Body:       buf.Bytes(),
 	}
 	return &request, nil
@@ -52,18 +47,12 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 
 // copy the values into protocol buffer
 // struct
-func copyMap(values map[string][]string) *Values {
-	valueMap := Values{
-		Items: make([]*Value, len(values)),
-	}
-	index := 0
+func copyMap(values map[string][]string) map[string]*Values {
+	headerMap := make(map[string]*Values, 0)
 	for k, v := range values {
-		key := k // Needed to copy the adress of string
-		valueMap.Items[index] = &Value{
-			Key:   &key,
-			Value: v,
+		headerMap[k] = &Values{
+			v,
 		}
-		index++
 	}
-	return &valueMap
+	return headerMap
 }

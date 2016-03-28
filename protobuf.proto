@@ -1,23 +1,24 @@
-message Value{
-     optional string key = 1;
-     repeated string value = 2;
+syntax = "proto3";
+option optimize_for = CODE_SIZE;
+option go_package = "natsproxy";
+
+
+message Values{
+	repeated string arr =1;
 }
 
-message Values {
-     repeated Value items = 1;
-}
 
 message Request {
-  optional string URL = 1;
-  optional string Method = 2;
-  optional string RemoteAddr = 3;
-  optional bytes Body = 4;
-  optional Values Form = 5;
-  optional Values Header = 6;
+  string URL = 1;
+  string Method = 2;
+  string RemoteAddr = 3;
+  bytes Body = 4;
+  map<string,Values> Form = 5;
+  map<string,Values>  Header = 6;
 }
 
 message Response {
-  optional int32 StatusCode = 1;
-  optional Values Header = 2;
-  optional bytes Body = 3;
+  int32 StatusCode = 1;
+  map<string,Values> Header = 2;
+  bytes Body = 3;
 }

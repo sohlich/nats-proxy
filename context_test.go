@@ -1,6 +1,7 @@
 package natsproxy
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -9,7 +10,7 @@ import (
 func TestPathVariable(t *testing.T) {
 	url := "/test/1234/tst?name=testuser"
 	req := &Request{
-		URL: &url,
+		URL: url,
 	}
 	resp := &Response{}
 	ctx := newContext("/test/:token/:session", resp, req)
@@ -35,7 +36,7 @@ func TestPathVariable(t *testing.T) {
 	}
 
 	url = ""
-	req.URL = &url
+	req.URL = url
 	tkn = ctx.PathVariable("token")
 	if tkn != "" {
 		t.Error("No variable in URL.Path returned non emtpy token")
@@ -54,6 +55,7 @@ func TestParseForm(t *testing.T) {
 	c.ParseForm()
 
 	if c.FormVariable("name") != "postname" {
+		fmt.Println("Got " + c.FormVariable("name"))
 		t.Error("Form variable assertion failed")
 	}
 }
