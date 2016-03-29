@@ -34,9 +34,9 @@ func (c *Context) Abort() {
 	c.abortIndex = c.index
 }
 
-// AbortWithJson aborts the request
+// AbortWithJSON aborts the request
 // and sets the HTTP status code to 500.
-func (c *Context) AbortWithJson(obj interface{}) {
+func (c *Context) AbortWithJSON(obj interface{}) {
 	c.Abort()
 	c.JSON(500, obj)
 }
