@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/nats-io/nats"
 )
 
 var (
@@ -27,4 +29,14 @@ func SubscribeURLToNats(method string, urlPath string) string {
 	subURL = strings.Replace(subURL, "/", ".", -1)
 	subURL = fmt.Sprintf("%s:%s", method, subURL)
 	return subURL
+}
+
+func testConnection(conn *nats.Conn) error {
+	if conn == nil {
+		return fmt.Errorf("natsproxy: Connection cannot be nil")
+	}
+	if conn.Status() != nats.CONNECTED {
+		return ErrNatsClientNotConnected
+	}
+	return nil
 }

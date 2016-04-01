@@ -50,8 +50,8 @@ type NatsClient struct {
 // connected or the function will
 // return error ErrNatsClientNotConnected.
 func NewNatsClient(conn *nats.Conn) (*NatsClient, error) {
-	if conn.Status() != nats.CONNECTED {
-		return nil, ErrNatsClientNotConnected
+	if err := testConnection(conn); err != nil {
+		return nil, err
 	}
 	return &NatsClient{
 		conn,

@@ -1,6 +1,9 @@
 package natsproxy
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestPathVariable(t *testing.T) {
 	req := &Request{
@@ -35,4 +38,60 @@ func TestPathVariable(t *testing.T) {
 		t.Error("No variable in URL.Path returned non emtpy token")
 	}
 
+}
+
+func TestAbortContext(t *testing.T) {
+
+	req := &Request{
+		URL: "/test/1234/tst",
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+	ctx.Abort()
+	if ctx.IsAborted() != true {
+		t.FailNow()
+	}
+
+}
+
+func TestAbortJSONContext(t *testing.T) {
+
+	req := &Request{
+		URL: "/test/1234/tst",
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+	ctx.AbortWithJSON("test")
+	if ctx.IsAborted() != true {
+		t.FailNow()
+	}
+	if exp, _ := json.Marshal("test"); string(exp) != string(resp.Body) {
+		t.FailNow()
+	}
+
+}
+
+type testStruct struct {
+	Data string
+}
+
+func TestBindJson(t *testing.T) {
+	dataStruct := testStruct{
+		"Test",
+	}
+
+	data, _ := json.Marshal(dataStruct)
+	req := &Request{
+		URL:  "/test/1234/tst",
+		Body: data,
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+
+	verifStruct := &testStruct{}
+	ctx.BindJSON(verifStruct)
+
+	if verifStruct.Data != dataStruct.Data {
+		t.FailNow()
+	}
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +23,7 @@ func TestProxy(t *testing.T) {
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	natsClient.Use(func(c *Context) {
-		c.Response.Header.Set("Middleware", "True")
+		c.Response.Header.Set("Middleware", "Mok")
 	})
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
 		reqEvent = c.PathVariable("event")
@@ -37,14 +36,14 @@ func TestProxy(t *testing.T) {
 		// Assert that the form
 		// is also parsed for the
 		// query params
-		nameVal := c.Request.Form.Get("name")
+		nameVal := c.FormVariable("name")
 		if nameVal != "testname" {
 			t.Error("Form value assertion failed")
 		}
 
 		// Assets that the form params
 		// are also parsed for post forms
-		nameVal = c.Request.Form.Get("post")
+		nameVal = c.FormVariable("post")
 		if nameVal != "postval" {
 			fmt.Println("postval: " + nameVal)
 			t.Error("Form value assertion failed")
@@ -63,10 +62,10 @@ func TestProxy(t *testing.T) {
 
 	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
+	proxyHandler.AddHook(".*", func(r *Response) {
+		r.Header.Set("Hook", "Hok")
+	})
 	defer proxyConn.Close()
-
-	// go http.ListenAndServe(":3000", nil)
-	// time.Sleep(1 * time.Second)
 
 	reader := strings.NewReader("post=postval")
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
@@ -76,18 +75,11 @@ func TestProxy(t *testing.T) {
 	rw := httptest.NewRecorder()
 	proxyHandler.ServeHTTP(rw, req)
 
-	// resp, err := http.PostForm("http://127.0.0.1:3000/test/12324/123?name=testname",
-	// 	url.Values{
-	// 		"post": []string{"postval"},
-	// 	})
-	// if err != nil {
-	// 	log.Println(err)
-	// 	t.Error("Cannot do post")
-	// 	return
-	// }
-
-	if rw.Header().Get("Middleware") != "True" {
+	if rw.Header().Get("Middleware") != "Mok" {
 		t.Error("Middleware usage assertion failed")
+	}
+	if rw.Header().Get("Hook") != "Hok" {
+		t.Error("Hook usage assertion failed")
 	}
 
 	out, _ := ioutil.ReadAll(rw.Body)
@@ -96,32 +88,8 @@ func TestProxy(t *testing.T) {
 	}{}
 
 	json.Unmarshal(out, respStruct)
-	log.Println(respStruct)
 	if respStruct.User != "Radek" {
 		t.Error("Response assertion failed")
-	}
-
-}
-
-func TestProxyNilConnectionClient(t *testing.T) {
-	//Should not be the IP of
-	clientConn, _ := nats.Connect("127.0.0.0:6666")
-	_, err := NewNatsProxy(clientConn)
-
-	if err == nil {
-		t.FailNow()
-	}
-
-}
-
-func TestProxyNotConnectedClient(t *testing.T) {
-	//Should not be the IP of
-	clientConn, _ := nats.Connect(nats_url)
-	clientConn.Close()
-	_, err := NewNatsProxy(clientConn)
-
-	if err == nil {
-		t.FailNow()
 	}
 
 }
