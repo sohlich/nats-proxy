@@ -42,6 +42,9 @@ type hookGroup struct {
 // NewNatsProxy creates an
 // initialized NatsProxy
 func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
+	if conn == nil {
+		return nil, fmt.Errorf("natsproxy: Connection cannot be nil")
+	}
 	if conn.Status() != nats.CONNECTED {
 		return nil, ErrNatsClientNotConnected
 	}

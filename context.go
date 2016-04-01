@@ -3,6 +3,7 @@ package natsproxy
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -68,7 +69,11 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 // based on its name (:xxx) defined
 // in subscription URL
 func (c *Context) PathVariable(name string) string {
-	URL := removeQueryRxp.ReplaceAllString(c.Request.URL, "")
+	RawURL, err := url.Parse(c.Request.URL)
+	if err != nil {
+		return ""
+	}
+	URL := removeQueryRxp.ReplaceAllString(RawURL.Path, "")
 	pathParams := strings.Split(URL, "/")
 
 	index, ok := c.params[name]

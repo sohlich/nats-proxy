@@ -2,6 +2,7 @@ package natsproxy
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -28,6 +29,9 @@ func NewResponse() *Response {
 // marshalled Response struct
 // back to struct.
 func DecodeResponse(responseData []byte) (*Response, error) {
+	if responseData == nil || len(responseData) == 0 {
+		return nil, errors.New("natsproxy: No response content found")
+	}
 	r := &Response{}
 	if err := json.Unmarshal(responseData, r); err != nil {
 		return nil, err

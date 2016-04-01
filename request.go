@@ -3,6 +3,7 @@ package natsproxy
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -32,6 +33,9 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 // regular *http.Request by
 // serialization of main parts of it.
 func NewRequestFromHTTP(req *http.Request) (*Request, error) {
+	if req == nil {
+		return nil, errors.New("natsproxy: Request cannot be nil")
+	}
 	var buf bytes.Buffer
 	if req.Body != nil {
 		if err := req.ParseForm(); err != nil {
