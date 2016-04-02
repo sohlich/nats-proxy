@@ -24,6 +24,9 @@ func TestProxy(t *testing.T) {
 	natsClient, _ := NewNatsClient(clientConn)
 	natsClient.Use(func(c *Context) {
 		c.Response.Header.Set("Middleware", "Mok")
+		if c.Request.Header.Get("X-Auth") == "" {
+			c.AbortWithJSON("Not authenticated")
+		}
 	})
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
 		reqEvent = c.PathVariable("event")
@@ -92,10 +95,22 @@ func TestProxy(t *testing.T) {
 		t.Error("Response assertion failed")
 	}
 
+	//Test aborting request
+	reader = strings.NewReader("post=postval")
+	req, _ = http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+
+	rw = httptest.NewRecorder()
+	proxyHandler.ServeHTTP(rw, req)
+
+	out, _ = ioutil.ReadAll(rw.Body)
+	if string(out) != "Not authenticated" && rw.Code != 500 {
+		t.Errorf("Abort assertion failed code: %d , resp: %s", rw.Code, string(out))
+	}
+
 }
 
 func TestProxyServeHttpError(t *testing.T) {
-
 	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
 	defer proxyConn.Close()
