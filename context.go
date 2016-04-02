@@ -118,11 +118,3 @@ func buildParamMap(url string) map[string]int {
 	}
 	return m
 }
-
-// func getPathVariableAtPlace(url string, place int) (string, error) {
-// 	parsedPath := strings.Split(url[1:], "/")
-// 	if len(parsedPath) < place {
-// 		return "", fmt.Errorf("Variable not found")
-// 	}
-// 	return parsedPath[place], nil
-// }
