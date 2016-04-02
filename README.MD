@@ -1,7 +1,7 @@
 # REST to NATS proxy.
 
-[![Build Status](https://travis-ci.org/sohlich/nats-proxy.svg?branch=master)](https://travis-ci.org/sohlich/nats-proxy)
-[![GoReport](https://goreportcard.com/report/gopkg.in/sohlich/nats-proxy.v1)](https://goreportcard.com/report/gopkg.in/sohlich/nats-proxy.v1)
+[![Build Status](https://api.travis-ci.org/sohlich/nats-proxy.svg?branch=v1)](https://travis-ci.org/sohlich/nats-proxy)
+[![GoReport](https://goreportcard.com/badge/gopkg.in/sohlich/nats-proxy.v1)](https://goreportcard.com/report/gopkg.in/sohlich/nats-proxy.v1)
 [![GoDoc](https://godoc.org/gopkg.in/sohlich/nats-proxy.v1?status.svg)](https://godoc.org/gopkg.in/sohlich/nats-proxy.v1)
 
 
