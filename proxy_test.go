@@ -6,28 +6,62 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/nats-io/nats"
 )
 
+// TestProxy integration test to
+// test complete proxy and client.
 func TestProxy(t *testing.T) {
 
 	var reqEvent string
-	var reqSession string
 
+	// Initialize NATS client
+	//
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
+	natsClient.Use(func(c *Context) {
+
+		c.Response.Header["Middleware"] = &Values{
+			[]string{"Mok"},
+		}
+
+		if c.HeaderVariable("X-Auth") == "" {
+			c.AbortWithJSON("Not authenticated")
+		}
+	})
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
+		c.ParseForm()
 		reqEvent = c.PathVariable("event")
-		reqSession = c.PathVariable("session")
+
+		if reqEvent != "12324" {
+			fmt.Println("ReqEvent: " + reqEvent)
+			t.Error("Path variable doesn't match")
+		}
+
+		// Assert that the form
+		// is also parsed for the
+		// query params
+
+		nameVal := c.FormVariable("name")
+		if nameVal != "testname" {
+			t.Error("Form value assertion failed")
+		}
+
+		// Assets that the form params
+		// are also parsed for post forms
+		nameVal = c.FormVariable("post")
+		if nameVal != "postval" {
+			fmt.Println("postval: " + nameVal)
+			t.Error("Form value assertion failed")
+		}
 
 		// Assert method
 		if c.Request.Method != "POST" {
@@ -51,56 +85,83 @@ func TestProxy(t *testing.T) {
 			}
 		}
 
-		c.ParseForm()
 		formVal := c.FormVariable("both")
 
 		if formVal != "y" {
+			fmt.Println(c.Request.Form)
 			t.Error("Form assertion failed")
 		}
 
 		// Generate response
 		c.JSON(200, respStruct)
-		c.Response.Header = map[string]*Values{"X-Auth": &Values{[]string{"12345"}}}
+		c.Response.Header["X-Auth"] = &Values{[]string{"12345"}}
 	})
 	defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
-	http.Handle("/", proxyHandler)
+	proxyHandler.AddHook(".*", func(r *Response) {
+		r.Header["Hook"] = &Values{
+			[]string{"Hok"},
+		}
+	})
 	defer proxyConn.Close()
 
-	log.Println("initializing proxy")
-	go http.ListenAndServe(":3000", nil)
-	time.Sleep(1 * time.Second)
-
-	log.Println("Posting request")
-	client := &http.Client{}
-
-	reader := strings.NewReader("z=post&both=y&prio=2&empty=")
-	req, err := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
+	reader := strings.NewReader("post=postval&both=y")
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname&both=n", reader)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 	req.Header.Set("X-AUTH", "xauthpayload")
 
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-		t.Error("Cannot do post")
-		return
+	rw := httptest.NewRecorder()
+	proxyHandler.ServeHTTP(rw, req)
+
+	if rw.Header().Get("Middleware") != "Mok" {
+		t.Error("Middleware usage assertion failed")
+	}
+	if rw.Header().Get("Hook") != "Hok" {
+		t.Error("Hook usage assertion failed")
 	}
 
-	out, _ := ioutil.ReadAll(resp.Body)
+	out, _ := ioutil.ReadAll(rw.Body)
 	respStruct := &struct {
 		User string
 	}{}
 
 	json.Unmarshal(out, respStruct)
-	log.Println(respStruct)
 	if respStruct.User != "Radek" {
 		t.Error("Response assertion failed")
 	}
 
-	if reqEvent != "12324" {
-		t.Error("Path variable doesn't match")
+	//Test aborting request
+	reader = strings.NewReader("post=postval")
+	req, _ = http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=testname", reader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+
+	rw = httptest.NewRecorder()
+	proxyHandler.ServeHTTP(rw, req)
+
+	out, _ = ioutil.ReadAll(rw.Body)
+	if string(out) != "Not authenticated" && rw.Code != 500 {
+		t.Errorf("Abort assertion failed code: %d , resp: %s", rw.Code, string(out))
+	}
+
+}
+
+func TestProxyServeHttpError(t *testing.T) {
+	proxyConn, _ := nats.Connect(nats_url)
+	proxyHandler, _ := NewNatsProxy(proxyConn)
+	defer proxyConn.Close()
+	rw := httptest.NewRecorder()
+	proxyHandler.ServeHTTP(rw, nil)
+
+	if rw.Code != http.StatusInternalServerError {
+		t.Error()
+	}
+
+	req, _ := http.NewRequest("", "", nil)
+	proxyHandler.ServeHTTP(rw, req)
+	if rw.Code != http.StatusInternalServerError {
+		t.Error()
 	}
 }
 

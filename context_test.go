@@ -1,6 +1,7 @@
 package natsproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -68,6 +69,62 @@ func TestParseFormNilBody(t *testing.T) {
 	req.Header.Set("X-AUTH", "xauthpayload")
 	testRequest, _ := NewRequestFromHTTP(req)
 	c := newContext(url, NewResponse(), testRequest)
-	c.ParseForm()
+	if err := c.ParseForm(); err == nil {
+		t.FailNow()
+	}
+}
 
+func TestAbortContext(t *testing.T) {
+	req := &Request{
+		URL: "/test/1234/tst",
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+	ctx.Abort()
+	if ctx.IsAborted() != true {
+		t.FailNow()
+	}
+
+}
+
+func TestAbortJSONContext(t *testing.T) {
+
+	req := &Request{
+		URL: "/test/1234/tst",
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+	ctx.AbortWithJSON("test")
+	if ctx.IsAborted() != true {
+		t.FailNow()
+	}
+	if exp, _ := json.Marshal("test"); string(exp) != string(resp.Body) {
+		t.FailNow()
+	}
+
+}
+
+type testStruct struct {
+	Data string
+}
+
+func TestBindJson(t *testing.T) {
+	dataStruct := testStruct{
+		"Test",
+	}
+
+	data, _ := json.Marshal(dataStruct)
+	req := &Request{
+		URL:  "/test/1234/tst",
+		Body: data,
+	}
+	resp := &Response{}
+	ctx := newContext("/test/:token/:session", resp, req)
+
+	verifStruct := &testStruct{}
+	ctx.BindJSON(verifStruct)
+
+	if verifStruct.Data != dataStruct.Data {
+		t.FailNow()
+	}
 }

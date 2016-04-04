@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
+
 	"net/url"
 	"regexp"
 	"strings"
 )
 
-var queryRemoveRegex = regexp.MustCompile("[?]{1}.*")
+var removeQueryRxp = regexp.MustCompile("[?]{1}.*")
 
 // Context wraps the
 // processed request/response
@@ -41,9 +41,9 @@ func (c *Context) Abort() {
 	c.abortIndex = c.index
 }
 
-// AbortWithJson aborts the request
+// AbortWithJSON aborts the request
 // and sets the HTTP status code to 500.
-func (c *Context) AbortWithJson(obj interface{}) {
+func (c *Context) AbortWithJSON(obj interface{}) {
 	c.Abort()
 	c.JSON(500, obj)
 }
@@ -67,7 +67,6 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 		c.writeError(err)
 	}
 	c.Response.Body = bytes
-
 }
 
 // PathVariable returns
@@ -75,8 +74,13 @@ func (c *Context) JSON(statusCode int, obj interface{}) {
 // based on its name (:xxx) defined
 // in subscription URL
 func (c *Context) PathVariable(name string) string {
-	url := queryRemoveRegex.ReplaceAllString(c.Request.URL, "")
-	pathParams := strings.Split(url, "/")
+	RawURL, err := url.Parse(c.Request.URL)
+	if err != nil {
+		return ""
+	}
+	URL := removeQueryRxp.ReplaceAllString(RawURL.Path, "")
+	pathParams := strings.Split(URL, "/")
+
 	index, ok := c.params[name]
 	if !ok {
 		return ""
@@ -91,8 +95,8 @@ func (c *Context) PathVariable(name string) string {
 // variable from request form if
 // available or empty string if not present.
 func (c *Context) FormVariable(name string) string {
-	arr := c.Request.Form[name]
-	if len(arr.Arr) > 0 {
+	arr, ok := c.Request.Form[name]
+	if ok && len(arr.Arr) > 0 {
 		return arr.Arr[0]
 	}
 	return ""
@@ -123,8 +127,13 @@ func (c *Context) ParseForm() error {
 	var err error
 	r := c.Request
 
+	RawURL, err := url.Parse(r.URL)
+	if err != nil {
+		return err
+	}
+
 	// Parse the url query first
-	queryForm, err := url.ParseQuery(r.URL)
+	queryForm := RawURL.Query()
 
 	// Parse the post form
 	var postFrom url.Values
@@ -230,12 +239,4 @@ func buildParamMap(url string) map[string]int {
 		}
 	}
 	return m
-}
-
-func getPathVariableAtPlace(url string, place int) (string, error) {
-	parsedPath := strings.Split(url[1:], "/")
-	if len(parsedPath) < place {
-		return "", fmt.Errorf("Variable not found")
-	}
-	return parsedPath[place], nil
 }

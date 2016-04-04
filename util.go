@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/nats-io/nats"
 )
 
 var (
@@ -39,4 +41,14 @@ func copyMap(values map[string][]string) map[string]*Values {
 		}
 	}
 	return headerMap
+}
+
+func testConnection(conn *nats.Conn) error {
+	if conn == nil {
+		return fmt.Errorf("natsproxy: Connection cannot be nil")
+	}
+	if conn.Status() != nats.CONNECTED {
+		return ErrNatsClientNotConnected
+	}
+	return nil
 }

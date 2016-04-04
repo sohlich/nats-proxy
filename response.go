@@ -1,6 +1,10 @@
 package natsproxy
 
-import "github.com/gogo/protobuf/proto"
+import (
+	"errors"
+
+	"github.com/gogo/protobuf/proto"
+)
 
 // NewResponse creates blank
 // initialized Response object.
@@ -16,6 +20,9 @@ func NewResponse() *Response {
 // marshalled Response struct
 // back to struct.
 func DecodeResponse(responseData []byte) (*Response, error) {
+	if responseData == nil || len(responseData) == 0 {
+		return nil, errors.New("natsproxy: No response content found")
+	}
 	r := &Response{}
 	if err := proto.Unmarshal(responseData, r); err != nil {
 		return nil, err
