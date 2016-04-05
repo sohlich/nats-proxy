@@ -51,20 +51,6 @@ func (m *Request) String() string            { return proto.CompactTextString(m)
 func (*Request) ProtoMessage()               {}
 func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *Request) GetForm() map[string]*Values {
-	if m != nil {
-		return m.Form
-	}
-	return nil
-}
-
-func (m *Request) GetHeader() map[string]*Values {
-	if m != nil {
-		return m.Header
-	}
-	return nil
-}
-
 type Response struct {
 	StatusCode int32              `protobuf:"varint,1,opt,name=StatusCode,json=statusCode" json:"StatusCode,omitempty"`
 	Header     map[string]*Values `protobuf:"bytes,2,rep,name=Header,json=header" json:"Header,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -75,13 +61,6 @@ func (m *Response) Reset()                    { *m = Response{} }
 func (m *Response) String() string            { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()               {}
 func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *Response) GetHeader() map[string]*Values {
-	if m != nil {
-		return m.Header
-	}
-	return nil
-}
 
 func init() {
 	proto.RegisterType((*Values)(nil), "Values")

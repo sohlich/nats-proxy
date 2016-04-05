@@ -6,6 +6,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+func (r *Response) GetHeader() Variables {
+	if r != nil {
+		return Variables(r.Header)
+	}
+	return nil
+}
+
 // NewResponse creates blank
 // initialized Response object.
 func NewResponse() *Response {

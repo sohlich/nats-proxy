@@ -94,16 +94,14 @@ func TestProxy(t *testing.T) {
 
 		// Generate response
 		c.JSON(200, respStruct)
-		c.Response.Header["X-Auth"] = &Values{[]string{"12345"}}
+		c.Response.GetHeader().Set("X-Auth", "12345")
 	})
 	defer clientConn.Close()
 
 	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
 	proxyHandler.AddHook(".*", func(r *Response) {
-		r.Header["Hook"] = &Values{
-			[]string{"Hok"},
-		}
+		r.GetHeader().Set("Hook", "Hok")
 	})
 	defer proxyConn.Close()
 

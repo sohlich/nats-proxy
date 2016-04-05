@@ -8,6 +8,20 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+func (r *Request) GetHeader() Variables {
+	if r != nil {
+		return Variables(r.Header)
+	}
+	return nil
+}
+
+func (r *Request) GetForm() Variables {
+	if r != nil {
+		return Variables(r.Form)
+	}
+	return nil
+}
+
 // UnmarshallFrom unmarshal the request from
 // bytes, that usually come from proxy.
 func (r *Request) UnmarshallFrom(requestData []byte) error {
