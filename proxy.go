@@ -3,12 +3,15 @@ package natsproxy
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats"
+	"github.com/satori/go.uuid"
 )
 
 var (
@@ -18,10 +21,21 @@ var (
 	ErrNatsClientNotConnected = fmt.Errorf("Client not connected")
 )
 
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
 // HookFunc is the function that is
 // used to modify response just before its
 // transformed to HTTP response
 type HookFunc func(*Response)
+
+type webSocketMapper struct {
+	toNats   map[*websocket.Conn]string
+	fromNats map[string]*websocket.Conn
+}
 
 // NatsProxy serves as a proxy
 // between gnats and http. It automatically
@@ -30,8 +44,9 @@ type HookFunc func(*Response)
 // serves as the name of the nats channel, where
 // the message is sent.
 type NatsProxy struct {
-	conn  *nats.Conn
-	hooks map[string]hookGroup
+	conn     *nats.Conn
+	hooks    map[string]hookGroup
+	wsMapper *webSocketMapper
 }
 
 type hookGroup struct {
@@ -48,13 +63,25 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 	return &NatsProxy{
 		conn,
 		make(map[string]hookGroup, 0),
+		&webSocketMapper{
+			make(map[*websocket.Conn]string, 0),
+			make(map[string]*websocket.Conn, 0),
+		},
 	}, nil
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+
+	isWebSock := IsWebSocketRequest(req)
+	wsID := ""
+	if isWebSock {
+		wsID = uuid.NewV4().String()
+	}
+
 	// Transform the HTTP request to
 	// NATS proxy request.
 	request, err := NewRequestFromHTTP(req)
+	request.WebSocketId = wsID
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
@@ -82,6 +109,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}
+
 	// Apply hook if regex match
 	for _, hG := range np.hooks {
 		if hG.regexp.MatchString(req.URL.Path) {
@@ -90,7 +118,35 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	writeResponse(rw, response)
+
+	if isWebSock && response.DoUpgrade {
+		log.Println("Getting websocket connection")
+		header := http.Header{}
+		copyHeader(response.Header, header)
+		if conn, err := upgrader.Upgrade(rw, req, header); err != nil {
+			np.wsMapper.fromNats[wsID] = conn
+			np.wsMapper.toNats[conn] = wsID
+			np.conn.Subscribe("WS_OUT"+wsID, func(m *nats.Msg) {
+				log.Println("Sending data to %s\n" + wsID)
+				err = conn.WriteMessage(websocket.BinaryMessage, m.Data)
+				if err != nil {
+					log.Println("Error writing a message", err)
+				}
+			})
+			go func() {
+				for {
+					if _, p, err := conn.ReadMessage(); err == nil {
+						log.Printf("Reading data from %s\n", wsID)
+						np.conn.Publish("WS_IN"+wsID, p)
+					}
+				}
+			}()
+		}
+	} else {
+		writeResponse(rw, response)
+
+	}
+
 }
 
 // AddHook add the hook to modify,

@@ -2,6 +2,7 @@ package natsproxy
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -51,4 +52,25 @@ func testConnection(conn *nats.Conn) error {
 		return ErrNatsClientNotConnected
 	}
 	return nil
+}
+
+// IsWebSocketRequest returns a boolean indicating whether the request has the
+// headers of a WebSocket handshake request.
+func IsWebSocketRequest(r *http.Request) bool {
+	contains := func(key, val string) bool {
+		vv := strings.Split(r.Header.Get(key), ",")
+		for _, v := range vv {
+			if val == strings.ToLower(strings.TrimSpace(v)) {
+				return true
+			}
+		}
+		return false
+	}
+	if !contains("Connection", "upgrade") {
+		return false
+	}
+	if !contains("Upgrade", "websocket") {
+		return false
+	}
+	return true
 }

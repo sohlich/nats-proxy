@@ -15,10 +15,12 @@ message Request {
   bytes Body = 4;
   map<string,Values> Form = 5;
   map<string,Values>  Header = 6;
+  string WebSocketId = 7;
 }
 
 message Response {
   int32 StatusCode = 1;
   map<string,Values> Header = 2;
   bytes Body = 3;
+  bool doUpgrade = 4;
 }
