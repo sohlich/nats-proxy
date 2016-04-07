@@ -71,10 +71,10 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-
 	isWebSock := IsWebSocketRequest(req)
 	wsID := ""
 	if isWebSock {
+		log.Println(URLToNats(req.Method, req.URL.Path))
 		wsID = uuid.NewV4().String()
 	}
 
@@ -120,10 +120,10 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if isWebSock && response.DoUpgrade {
-		log.Println("Getting websocket connection")
 		header := http.Header{}
 		copyHeader(response.Header, header)
-		if conn, err := upgrader.Upgrade(rw, req, header); err != nil {
+		if conn, err := upgrader.Upgrade(rw, req, header); err == nil {
+			log.Println("Subscribing")
 			np.wsMapper.fromNats[wsID] = conn
 			np.wsMapper.toNats[conn] = wsID
 			np.conn.Subscribe("WS_OUT"+wsID, func(m *nats.Msg) {
@@ -135,9 +135,14 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			})
 			go func() {
 				for {
+					log.Println("Running go func to read WS")
 					if _, p, err := conn.ReadMessage(); err == nil {
 						log.Printf("Reading data from %s\n", wsID)
 						np.conn.Publish("WS_IN"+wsID, p)
+					} else {
+						//TODO finish
+						log.Println(err)
+						break
 					}
 				}
 			}()

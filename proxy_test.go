@@ -1,17 +1,16 @@
 package natsproxy
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"mime/multipart"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
+	"os/signal"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/nats-io/nats"
@@ -163,29 +162,27 @@ func TestProxyServeHttpError(t *testing.T) {
 	}
 }
 
-// Creates a new file upload http request with optional extra params
-func newfileUploadRequest(uri string, params map[string]string, paramName, path string) (*http.Request, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+func TestWebSocket(t *testing.T) {
+	//Start proxy
+	proxyConn, _ := nats.Connect(nats_url)
+	proxyHandler, _ := NewNatsProxy(proxyConn)
+	go http.ListenAndServe(":8080", proxyHandler)
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile(paramName, filepath.Base(path))
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(part, file)
+	clientConn, _ := nats.Connect(nats_url)
+	natsClient, _ := NewNatsClient(clientConn)
+	natsClient.GET("/ws", func(c *Context) {
+		log.Println("Got ws request")
+		c.Response.DoUpgrade = true
+		if c.Request.WebSocketId != "" {
+			log.Println("Subscribing to " + "WS_IN" + c.Request.WebSocketId)
+			clientConn.Subscribe("WS_IN"+c.Request.WebSocketId, func(m *nats.Msg) {
+				fmt.Println(string(m.Data))
+			})
+		}
+	})
 
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
-	}
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return http.NewRequest("POST", uri, body)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	fmt.Println("Press Ctrl+C for exit.")
+	<-sig
 }
