@@ -127,8 +127,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			np.wsMapper.fromNats[wsID] = conn
 			np.wsMapper.toNats[conn] = wsID
 			np.conn.Subscribe("WS_OUT"+wsID, func(m *nats.Msg) {
-				log.Println("Sending data to %s\n" + wsID)
-				err = conn.WriteMessage(websocket.BinaryMessage, m.Data)
+				err = conn.WriteMessage(websocket.TextMessage, m.Data)
 				if err != nil {
 					log.Println("Error writing a message", err)
 				}
@@ -137,7 +136,6 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				for {
 					log.Println("Running go func to read WS")
 					if _, p, err := conn.ReadMessage(); err == nil {
-						log.Printf("Reading data from %s\n", wsID)
 						np.conn.Publish("WS_IN"+wsID, p)
 					} else {
 						//TODO finish

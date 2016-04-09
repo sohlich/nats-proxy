@@ -7,12 +7,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats"
 )
 
@@ -177,12 +175,20 @@ func TestWebSocket(t *testing.T) {
 			log.Println("Subscribing to " + "WS_IN" + c.Request.WebSocketId)
 			clientConn.Subscribe("WS_IN"+c.Request.WebSocketId, func(m *nats.Msg) {
 				fmt.Println(string(m.Data))
+				clientConn.Publish("WS_OUT"+c.Request.WebSocketId, []byte("Hi there"))
 			})
 		}
 	})
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	fmt.Println("Press Ctrl+C for exit.")
-	<-sig
+	if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws", nil); err == nil {
+		conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
+		_, p, _ := conn.ReadMessage()
+		if string(p) != "Hi there" {
+			t.Error("Message assertion failed")
+		}
+
+	} else {
+		t.Error("Cannot connect to ws")
+	}
+
 }
