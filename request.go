@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/satori/go.uuid"
 )
 
 func (r *Request) GetHeader() Variables {
@@ -31,6 +32,14 @@ func (r *Request) UnmarshallFrom(requestData []byte) error {
 	return nil
 }
 
+func (r *Request) IsWebSocket() bool {
+	return r.WebSocketID != ""
+}
+
+func (r *Request) GetWebSocketID() string {
+	return r.WebSocketID
+}
+
 // NewRequestFromHTTP creates
 // the Request struct from
 // regular *http.Request by
@@ -39,6 +48,13 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 	if req == nil {
 		return nil, errors.New("natsproxy: Request cannot be nil")
 	}
+
+	isWebSock := IsWebSocketRequest(req)
+	wsID := ""
+	if isWebSock {
+		wsID = uuid.NewV4().String()
+	}
+
 	var buf bytes.Buffer
 	if req.Body != nil {
 		if _, err := buf.ReadFrom(req.Body); err != nil {
@@ -51,11 +67,12 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 
 	headerMap := copyMap(map[string][]string(req.Header))
 	request := Request{
-		URL:        req.URL.String(),
-		Method:     req.Method,
-		Header:     headerMap,
-		RemoteAddr: req.RemoteAddr,
-		Body:       buf.Bytes(),
+		URL:         req.URL.String(),
+		Method:      req.Method,
+		Header:      headerMap,
+		RemoteAddr:  req.RemoteAddr,
+		Body:        buf.Bytes(),
+		WebSocketID: wsID,
 	}
 	return &request, nil
 }

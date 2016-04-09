@@ -171,11 +171,9 @@ func TestWebSocket(t *testing.T) {
 	natsClient.GET("/ws", func(c *Context) {
 		log.Println("Got ws request")
 		c.Response.DoUpgrade = true
-		if c.Request.WebSocketId != "" {
-			log.Println("Subscribing to " + "WS_IN" + c.Request.WebSocketId)
-			clientConn.Subscribe("WS_IN"+c.Request.WebSocketId, func(m *nats.Msg) {
-				fmt.Println(string(m.Data))
-				clientConn.Publish("WS_OUT"+c.Request.WebSocketId, []byte("Hi there"))
+		if c.Request.IsWebSocket() {
+			natsClient.HandleWebsocket(c.Request.GetWebSocketID(), func(m *nats.Msg) {
+				natsClient.WriteWebsocket(c.Request.GetWebSocketID(), []byte("Hi there"))
 			})
 		}
 	})
@@ -184,9 +182,14 @@ func TestWebSocket(t *testing.T) {
 		conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
 		_, p, _ := conn.ReadMessage()
 		if string(p) != "Hi there" {
+			fmt.Println(string(p))
 			t.Error("Message assertion failed")
+		} else {
+			fmt.Println("Received message ok")
 		}
-
+		if e := conn.Close(); e != nil {
+			t.Error("Cannot close WS")
+		}
 	} else {
 		t.Error("Cannot connect to ws")
 	}

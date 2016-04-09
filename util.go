@@ -13,6 +13,16 @@ var (
 	pathrgxp = regexp.MustCompile(":[A-z,0-9,$,-,_,.,+,!,*,',(,),\\,]{1,}")
 )
 
+const (
+	// Prefix for Web Socket
+	// INPUT channel
+	ws_IN = "WS_IN"
+
+	//Prefix for Web Socket
+	// OUTPUT channel
+	ws_OUT = "WS_OUT"
+)
+
 // URLToNats builds the channel name
 // from an URL and Method of http.Request
 func URLToNats(method string, urlPath string) string {

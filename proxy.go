@@ -11,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats"
-	"github.com/satori/go.uuid"
 )
 
 var (
@@ -71,17 +70,10 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 }
 
 func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	isWebSock := IsWebSocketRequest(req)
-	wsID := ""
-	if isWebSock {
-		log.Println(URLToNats(req.Method, req.URL.Path))
-		wsID = uuid.NewV4().String()
-	}
 
 	// Transform the HTTP request to
 	// NATS proxy request.
 	request, err := NewRequestFromHTTP(req)
-	request.WebSocketId = wsID
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return
@@ -119,35 +111,22 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if isWebSock && response.DoUpgrade {
+	// If response contains
+	// the permission to do ws upgrade, the
+	// proxy side upgrades the connection and
+	// provides the Web Socket proxiing on
+	// provided wsID toppic (WS_IN+wsID as receiving
+	// and WS_OUT+wsID as outcoming)
+	if request.IsWebSocket() && response.DoUpgrade {
 		header := http.Header{}
 		copyHeader(response.Header, header)
 		if conn, err := upgrader.Upgrade(rw, req, header); err == nil {
-			log.Println("Subscribing")
-			np.wsMapper.fromNats[wsID] = conn
-			np.wsMapper.toNats[conn] = wsID
-			np.conn.Subscribe("WS_OUT"+wsID, func(m *nats.Msg) {
-				err = conn.WriteMessage(websocket.TextMessage, m.Data)
-				if err != nil {
-					log.Println("Error writing a message", err)
-				}
-			})
-			go func() {
-				for {
-					log.Println("Running go func to read WS")
-					if _, p, err := conn.ReadMessage(); err == nil {
-						np.conn.Publish("WS_IN"+wsID, p)
-					} else {
-						//TODO finish
-						log.Println(err)
-						break
-					}
-				}
-			}()
+			np.activateWSProxySubject(conn, request.WebSocketID)
+		} else {
+			log.Println("natsproxy error: " + err.Error())
 		}
 	} else {
 		writeResponse(rw, response)
-
 	}
 
 }
@@ -172,6 +151,33 @@ func (np *NatsProxy) AddHook(urlRegex string, hook HookFunc) error {
 		hG.hooks = append(hG.hooks, hook)
 	}
 	return nil
+}
+
+func (np *NatsProxy) activateWSProxySubject(conn *websocket.Conn, wsID string) {
+	np.addToWSMapper(conn, wsID)
+	np.conn.Subscribe("WS_OUT"+wsID, func(m *nats.Msg) {
+		err := conn.WriteMessage(websocket.TextMessage, m.Data)
+		if err != nil {
+			log.Println("Error writing a message", err)
+		}
+	})
+	go func() {
+		// TODO more
+		for {
+			if _, p, err := conn.ReadMessage(); err == nil {
+				np.conn.Publish("WS_IN"+wsID, p)
+			} else {
+				//TODO finish
+				log.Println(err)
+				break
+			}
+		}
+	}()
+}
+
+func (np *NatsProxy) addToWSMapper(conn *websocket.Conn, wsID string) {
+	np.wsMapper.fromNats[wsID] = conn
+	np.wsMapper.toNats[conn] = wsID
 }
 
 func writeResponse(rw http.ResponseWriter, response *Response) {

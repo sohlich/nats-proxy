@@ -3,6 +3,8 @@ package natsproxy
 import (
 	"log"
 
+	"encoding/json"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats"
 )
@@ -121,4 +123,23 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 		}
 		nc.conn.Publish(m.Reply, bytes)
 	})
+}
+
+func (nc *NatsClient) HandleWebsocket(webSocketID string, handler nats.MsgHandler) {
+	nc.conn.Subscribe(ws_IN+webSocketID, handler)
+}
+
+// WriteWebsocketJSON writes struct
+// serialized to JSON to registered
+// websocketID NATS subject.
+func (nc *NatsClient) WriteWebsocketJSON(websocketID string, msg interface{}) error {
+	if data, err := json.Marshal(msg); err == nil {
+		return nc.WriteWebsocket(websocketID, data)
+	} else {
+		return err
+	}
+}
+
+func (nc *NatsClient) WriteWebsocket(websocketID string, data []byte) error {
+	return nc.conn.Publish(ws_OUT+websocketID, data)
 }
