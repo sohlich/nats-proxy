@@ -162,13 +162,12 @@ func (np *NatsProxy) activateWSProxySubject(conn *websocket.Conn, wsID string) {
 		}
 	})
 	go func() {
-		// TODO more
 		for {
 			if _, p, err := conn.ReadMessage(); err == nil {
 				np.conn.Publish("WS_IN"+wsID, p)
 			} else {
-				//TODO finish
-				log.Println(err)
+				np.removeFromWSMapper(conn, wsID)
+				logWebsocketError(wsID, err)
 				break
 			}
 		}
@@ -178,6 +177,41 @@ func (np *NatsProxy) activateWSProxySubject(conn *websocket.Conn, wsID string) {
 func (np *NatsProxy) addToWSMapper(conn *websocket.Conn, wsID string) {
 	np.wsMapper.fromNats[wsID] = conn
 	np.wsMapper.toNats[conn] = wsID
+}
+
+func (np *NatsProxy) removeFromWSMapper(conn *websocket.Conn, wsID string) {
+	delete(np.wsMapper.fromNats, wsID)
+	delete(np.wsMapper.toNats, conn)
+}
+
+func (np *NatsProxy) resetWSMapper() {
+	np.wsMapper.fromNats = make(map[string]*websocket.Conn, 0)
+	np.wsMapper.toNats = make(map[*websocket.Conn]string, 0)
+}
+
+func (np *NatsProxy) closeAllWebsockets() error {
+	var outerError error
+	closed := make([]string, 0)
+	for key, val := range np.wsMapper.fromNats {
+		if err := val.Close(); err != nil {
+			outerError = fmt.Errorf("nats-proxy: closing websocket ID: %s caused error: %s", key, err.Error())
+		}
+		closed = append(closed, key)
+	}
+	if outerError == nil {
+		np.resetWSMapper()
+	} else {
+		// Remove just closed
+		for _, val := range closed {
+			np.removeFromWSMapper(np.wsMapper.fromNats[val], val)
+		}
+	}
+
+	return outerError
+}
+
+func logWebsocketError(wsID string, err error) {
+	log.Printf("nats-proxy: underlying websocker ID: %s error: %s", wsID, err.Error())
 }
 
 func writeResponse(rw http.ResponseWriter, response *Response) {
