@@ -51,7 +51,8 @@ func TestParseForm(t *testing.T) {
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=queryname", reader)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 	req.Header.Set("X-AUTH", "xauthpayload")
-	testRequest, _ := NewRequestFromHTTP(req)
+	testRequest := NewRequest()
+	testRequest.FromHTTP(req)
 	c := newContext(url, NewResponse(), testRequest)
 	c.ParseForm()
 
@@ -63,11 +64,12 @@ func TestParseForm(t *testing.T) {
 
 func TestParseFormNilBody(t *testing.T) {
 	url := "http://127.0.0.1:3000/test/12324/123?name=queryname"
-	// reader := strings.NewReader("z=post&both=y&prio=2&empty=&name=postname")
 	req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/123?name=queryname", nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 	req.Header.Set("X-AUTH", "xauthpayload")
-	testRequest, _ := NewRequestFromHTTP(req)
+	testRequest := NewRequest()
+	testRequest.FromHTTP(req)
+	testRequest.Body = nil
 	c := newContext(url, NewResponse(), testRequest)
 	if err := c.ParseForm(); err == nil {
 		t.FailNow()

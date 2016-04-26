@@ -42,7 +42,8 @@ func TestNewRequestFromHttp(t *testing.T) {
 		URL:    url,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{0xFF, 0xFC})),
 	}
-	req, err := NewRequestFromHTTP(httpReq)
+	req := NewRequest()
+	err := req.FromHTTP(httpReq)
 
 	if err != nil {
 		t.Error(err)
@@ -64,7 +65,8 @@ func BenchmarkMarshallRequest(b *testing.B) {
 		URL:    url,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{0xFF, 0xFC})),
 	}
-	req, _ := NewRequestFromHTTP(httpReq)
+	req := NewRequest()
+	req.FromHTTP(httpReq)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		proto.Marshal(req)

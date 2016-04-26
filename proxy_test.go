@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats"
@@ -49,6 +51,7 @@ func TestProxy(t *testing.T) {
 
 		nameVal := c.FormVariable("name")
 		if nameVal != "testname" {
+			fmt.Println("postval 1: " + nameVal)
 			t.Error("Form value assertion failed")
 		}
 
@@ -56,7 +59,7 @@ func TestProxy(t *testing.T) {
 		// are also parsed for post forms
 		nameVal = c.FormVariable("post")
 		if nameVal != "postval" {
-			fmt.Println("postval: " + nameVal)
+			fmt.Println("postval 2: " + nameVal)
 			t.Error("Form value assertion failed")
 		}
 
@@ -160,25 +163,70 @@ func TestProxyServeHttpError(t *testing.T) {
 	}
 }
 
+// Test if the pool and reset of request
+// works correctly
+func BenchmarkProxyPool(b *testing.B) {
+
+	b.StopTimer()
+	proxyConn, _ := nats.Connect(nats_url)
+	proxyHandler, _ := NewNatsProxy(proxyConn)
+
+	clientConn, _ := nats.Connect(nats_url)
+	natsClient, _ := NewNatsClient(clientConn)
+
+	testVal := struct {
+		Data string
+	}{}
+
+	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
+		fmt.Println("Getting request")
+		c.ParseForm()
+		reqEvent := c.FormVariable("post")
+		if reqEvent != testVal.Data {
+			fmt.Printf("Not getting "+testVal.Data+" get %s instead\n", reqEvent)
+			b.FailNow()
+		}
+	})
+
+	b.ResetTimer()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		testVal.Data = fmt.Sprintf("%v", time.Now().Unix())
+		testVal.Data = testVal.Data[0:rand.Intn(len(testVal.Data))]
+		fmt.Printf("Expected %s\n", testVal.Data)
+		reader := strings.NewReader("post=" + testVal.Data)
+		req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/2222", reader)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+		rw := httptest.NewRecorder()
+		proxyHandler.ServeHTTP(rw, req)
+	}
+	b.StopTimer()
+
+}
+
+// Tests the ability
+// to make a proxy to websockets
 func TestWebSocket(t *testing.T) {
 	//Start proxy
 	proxyConn, _ := nats.Connect(nats_url)
+	defer proxyConn.Close()
+
 	proxyHandler, _ := NewNatsProxy(proxyConn)
 	go http.ListenAndServe(":8080", proxyHandler)
 
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
-	natsClient.GET("/ws", func(c *Context) {
+	natsClient.GET("/ws/:token", func(c *Context) {
 		log.Println("Got ws request")
-		c.Response.DoUpgrade = true
 		if c.Request.IsWebSocket() {
+			c.Response.DoUpgrade = true
 			natsClient.HandleWebsocket(c.Request.GetWebSocketID(), func(m *nats.Msg) {
 				natsClient.WriteWebsocket(c.Request.GetWebSocketID(), []byte("Hi there"))
 			})
 		}
 	})
 
-	if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws", nil); err == nil {
+	if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/1234", nil); err == nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
 		_, p, _ := conn.ReadMessage()
 		if string(p) != "Hi there" {
@@ -191,6 +239,7 @@ func TestWebSocket(t *testing.T) {
 			t.Error("Cannot close WS")
 		}
 	} else {
+		fmt.Println(err)
 		t.Error("Cannot connect to ws")
 	}
 

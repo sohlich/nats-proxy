@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -43,9 +44,11 @@ type webSocketMapper struct {
 // serves as the name of the nats channel, where
 // the message is sent.
 type NatsProxy struct {
-	conn     *nats.Conn
-	hooks    map[string]hookGroup
-	wsMapper *webSocketMapper
+	conn         *nats.Conn
+	hooks        map[string]hookGroup
+	wsMapper     *webSocketMapper
+	requestPool  sync.Pool
+	responsePool sync.Pool
 }
 
 type hookGroup struct {
@@ -66,6 +69,12 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 			make(map[*websocket.Conn]string, 0),
 			make(map[string]*websocket.Conn, 0),
 		},
+		sync.Pool{
+			New: func() interface{} { return NewRequest() },
+		},
+		sync.Pool{
+			New: func() interface{} { return NewResponse() },
+		},
 	}, nil
 }
 
@@ -73,7 +82,13 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Transform the HTTP request to
 	// NATS proxy request.
-	request, err := NewRequestFromHTTP(req)
+	request, _ := np.requestPool.Get().(*Request)
+	defer func() {
+		request.reset()
+		np.requestPool.Put(request)
+	}()
+
+	err := request.FromHTTP(req)
 	if err != nil {
 		http.Error(rw, "Cannot process request", http.StatusInternalServerError)
 		return

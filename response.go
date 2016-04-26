@@ -20,6 +20,7 @@ func NewResponse() *Response {
 		StatusCode: int32(200),
 		Header:     make(map[string]*Values, 0),
 		Body:       make([]byte, 0),
+		DoUpgrade:  false,
 	}
 }
 
@@ -35,4 +36,11 @@ func DecodeResponse(responseData []byte) (*Response, error) {
 		return nil, err
 	}
 	return r, nil
+}
+
+func (res *Response) reset() {
+	res.Header = make(map[string]*Values)
+	res.Body = res.Body[0:0]
+	res.DoUpgrade = false
+	res.StatusCode = int32(0)
 }

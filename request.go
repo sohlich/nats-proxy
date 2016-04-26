@@ -3,6 +3,7 @@ package natsproxy
 import (
 	"bytes"
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/gogo/protobuf/proto"
@@ -40,13 +41,10 @@ func (r *Request) GetWebSocketID() string {
 	return r.WebSocketID
 }
 
-// NewRequestFromHTTP creates
-// the Request struct from
-// regular *http.Request by
-// serialization of main parts of it.
-func NewRequestFromHTTP(req *http.Request) (*Request, error) {
+func (r *Request) FromHTTP(req *http.Request) error {
+
 	if req == nil {
-		return nil, errors.New("natsproxy: Request cannot be nil")
+		return errors.New("natsproxy: Request cannot be nil")
 	}
 
 	isWebSock := IsWebSocketRequest(req)
@@ -55,24 +53,40 @@ func NewRequestFromHTTP(req *http.Request) (*Request, error) {
 		wsID = uuid.NewV4().String()
 	}
 
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(r.Body)
+	buf.Reset()
 	if req.Body != nil {
-		if _, err := buf.ReadFrom(req.Body); err != nil {
-			return nil, err
+		if _, err := io.Copy(buf, req.Body); err != nil {
+			return err
 		}
 		if err := req.Body.Close(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	headerMap := copyMap(map[string][]string(req.Header))
-	request := Request{
-		URL:         req.URL.String(),
-		Method:      req.Method,
-		Header:      headerMap,
-		RemoteAddr:  req.RemoteAddr,
-		Body:        buf.Bytes(),
-		WebSocketID: wsID,
+	r.URL = req.URL.String()
+	r.Method = req.Method
+	r.Header = headerMap
+	r.RemoteAddr = req.RemoteAddr
+	r.WebSocketID = wsID
+	r.Body = buf.Bytes()
+	return nil
+}
+
+func NewRequest() *Request {
+	return &Request{
+		Header: make(map[string]*Values),
+		Form:   make(map[string]*Values),
+		Body:   make([]byte, 4096),
 	}
-	return &request, nil
+}
+
+func (req *Request) reset() {
+	req.Header = make(map[string]*Values)
+	req.Form = make(map[string]*Values)
+	req.Method = req.Method[0:0]
+	req.Body = req.Body[0:0]
+	req.RemoteAddr = req.RemoteAddr[0:0]
+	req.URL = req.URL[0:0]
 }
