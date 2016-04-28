@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/satori/go.uuid"
@@ -89,4 +90,25 @@ func (req *Request) reset() {
 	req.Body = req.Body[0:0]
 	req.RemoteAddr = req.RemoteAddr[0:0]
 	req.URL = req.URL[0:0]
+}
+
+type RequestPool struct {
+	sync.Pool
+}
+
+func (r *RequestPool) GetRequest() *Request {
+	request, _ := r.Get().(*Request)
+	return request
+}
+
+func (r *RequestPool) PutRequest(req *Request) {
+	req.reset()
+	r.Put(req)
+}
+
+func NewRequestPool() RequestPool {
+	return RequestPool{
+		sync.Pool{
+			New: func() interface{} { return NewRequest() },
+		}}
 }

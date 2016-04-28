@@ -2,6 +2,7 @@ package natsproxy
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -27,15 +28,14 @@ func NewResponse() *Response {
 // DecodeResponse decodes the
 // marshalled Response struct
 // back to struct.
-func DecodeResponse(responseData []byte) (*Response, error) {
+func (r *Response) ReadFrom(responseData []byte) error {
 	if responseData == nil || len(responseData) == 0 {
-		return nil, errors.New("natsproxy: No response content found")
+		return errors.New("natsproxy: No response content found")
 	}
-	r := &Response{}
 	if err := proto.Unmarshal(responseData, r); err != nil {
-		return nil, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 func (res *Response) reset() {
@@ -43,4 +43,25 @@ func (res *Response) reset() {
 	res.Body = res.Body[0:0]
 	res.DoUpgrade = false
 	res.StatusCode = int32(0)
+}
+
+type ResponsePool struct {
+	sync.Pool
+}
+
+func (r *ResponsePool) GetResponse() *Response {
+	res, _ := r.Get().(*Response)
+	return res
+}
+
+func (r *ResponsePool) PutResponse(res *Response) {
+	res.reset()
+	r.Put(res)
+}
+
+func NewResponsePool() ResponsePool {
+	return ResponsePool{
+		sync.Pool{
+			New: func() interface{} { return NewResponse() },
+		}}
 }

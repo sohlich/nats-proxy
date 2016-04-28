@@ -165,42 +165,44 @@ func TestProxyServeHttpError(t *testing.T) {
 
 // Test if the pool and reset of request
 // works correctly
-func BenchmarkProxyPool(b *testing.B) {
+func BenchProxyPool(b *testing.B) {
 
-	b.StopTimer()
 	proxyConn, _ := nats.Connect(nats_url)
 	proxyHandler, _ := NewNatsProxy(proxyConn)
 
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 
-	testVal := struct {
-		Data string
-	}{}
+	assertChan := make(chan string, 1)
 
 	natsClient.Subscribe("POST", "/test/:event/:session", func(c *Context) {
 		fmt.Println("Getting request")
 		c.ParseForm()
 		reqEvent := c.FormVariable("post")
-		if reqEvent != testVal.Data {
-			fmt.Printf("Not getting "+testVal.Data+" get %s instead\n", reqEvent)
-			b.FailNow()
-		}
+		fmt.Println("Posting value")
+		assertChan <- reqEvent
 	})
 
+	b.StopTimer()
 	b.ResetTimer()
-	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		testVal.Data = fmt.Sprintf("%v", time.Now().Unix())
-		testVal.Data = testVal.Data[0:rand.Intn(len(testVal.Data))]
-		fmt.Printf("Expected %s\n", testVal.Data)
-		reader := strings.NewReader("post=" + testVal.Data)
+		testVal := fmt.Sprintf("%v", time.Now().Unix())
+		testVal = testVal[0:rand.Intn(len(testVal))]
+		fmt.Printf("Expected %s\n", testVal)
+		reader := strings.NewReader("post=" + testVal)
 		req, _ := http.NewRequest("POST", "http://127.0.0.1:3000/test/12324/2222", reader)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 		rw := httptest.NewRecorder()
+		b.StartTimer()
 		proxyHandler.ServeHTTP(rw, req)
+		assert := <-assertChan
+		fmt.Printf("Assert value %s", assert)
+		if assert != testVal {
+			fmt.Printf("Not getting "+assert+" get %s instead\n", testVal)
+			b.FailNow()
+		}
+		b.StopTimer()
 	}
-	b.StopTimer()
 
 }
 

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -47,8 +46,8 @@ type NatsProxy struct {
 	conn         *nats.Conn
 	hooks        map[string]hookGroup
 	wsMapper     *webSocketMapper
-	requestPool  sync.Pool
-	responsePool sync.Pool
+	requestPool  RequestPool
+	responsePool ResponsePool
 }
 
 type hookGroup struct {
@@ -69,12 +68,8 @@ func NewNatsProxy(conn *nats.Conn) (*NatsProxy, error) {
 			make(map[*websocket.Conn]string, 0),
 			make(map[string]*websocket.Conn, 0),
 		},
-		sync.Pool{
-			New: func() interface{} { return NewRequest() },
-		},
-		sync.Pool{
-			New: func() interface{} { return NewResponse() },
-		},
+		NewRequestPool(),
+		NewResponsePool(),
 	}, nil
 }
 
@@ -82,11 +77,8 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Transform the HTTP request to
 	// NATS proxy request.
-	request, _ := np.requestPool.Get().(*Request)
-	defer func() {
-		request.reset()
-		np.requestPool.Put(request)
-	}()
+	request := np.requestPool.GetRequest()
+	defer np.requestPool.Put(request)
 
 	err := request.FromHTTP(req)
 	if err != nil {
@@ -110,8 +102,9 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "No response", http.StatusInternalServerError)
 		return
 	}
-	var response *Response
-	response, err = DecodeResponse(msg.Data)
+	response := np.responsePool.GetResponse()
+	err = response.ReadFrom(msg.Data)
+	defer np.responsePool.Put(response)
 	if err != nil {
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return

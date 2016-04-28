@@ -45,6 +45,8 @@ type Connector interface {
 type NatsClient struct {
 	conn    *nats.Conn
 	filters NatsHandlers
+	reqPool RequestPool
+	resPool ResponsePool
 }
 
 // NewNatsClient creates new NATS client
@@ -58,6 +60,8 @@ func NewNatsClient(conn *nats.Conn) (*NatsClient, error) {
 	return &NatsClient{
 		conn,
 		make([]NatsHandler, 0),
+		NewRequestPool(),
+		NewResponsePool(),
 	}, nil
 }
 
@@ -97,12 +101,14 @@ func (nc *NatsClient) DELETE(url string, handler NatsHandler) {
 func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 	subscribeURL := SubscribeURLToNats(method, url)
 	nc.conn.Subscribe(subscribeURL, func(m *nats.Msg) {
-		request := &Request{}
+		request := nc.reqPool.GetRequest()
+		defer nc.reqPool.Put(request)
 		if err := request.UnmarshallFrom(m.Data); err != nil {
 			log.Println(err)
 			return
 		}
-		response := NewResponse()
+		response := nc.resPool.GetResponse()
+		defer nc.resPool.Put(response)
 		c := newContext(url, response, request)
 
 		// Iterate through filters
