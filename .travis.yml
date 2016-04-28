@@ -18,3 +18,5 @@ install:
   - go get github.com/nats-io/nats
   - go get github.com/gogo/protobuf/proto
   - go get github.com/golang/protobuf/proto
+  - go get github.com/gorilla/websocket
+  - go get github.com/satori/go.uuid
