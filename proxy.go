@@ -175,6 +175,7 @@ func (np *NatsProxy) activateWSProxySubject(conn *websocket.Conn, wsID string) {
 				np.conn.Publish("WS_IN"+wsID, p)
 			} else {
 				np.removeFromWSMapper(conn, wsID)
+				conn.Close()
 				logWebsocketError(wsID, err)
 				break
 			}

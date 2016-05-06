@@ -210,21 +210,23 @@ func TestWebSocket(t *testing.T) {
 		}
 	})
 
-	if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/1234", nil); err == nil {
-		conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
-		_, p, _ := conn.ReadMessage()
-		if string(p) != "Hi there" {
-			fmt.Println(string(p))
-			t.Error("Message assertion failed")
+	for i := 0; i < 10000; i++ {
+		if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/1234", nil); err == nil {
+			conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
+			_, p, _ := conn.ReadMessage()
+			if string(p) != "Hi there" {
+				fmt.Println(string(p))
+				t.Error("Message assertion failed")
+			} else {
+				fmt.Println("Received message ok")
+			}
+			if e := conn.Close(); e != nil {
+				t.Error("Cannot close WS")
+			}
 		} else {
-			fmt.Println("Received message ok")
+			fmt.Println(err)
+			t.Error("Cannot connect to ws")
 		}
-		if e := conn.Close(); e != nil {
-			t.Error("Cannot close WS")
-		}
-	} else {
-		fmt.Println(err)
-		t.Error("Cannot connect to ws")
 	}
 
 }
