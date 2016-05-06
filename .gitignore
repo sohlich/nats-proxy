@@ -1,2 +1,5 @@
 cover.out
 fmt
+proxy.prof
+proxy.mem
+nats-proxy.test
