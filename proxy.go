@@ -176,7 +176,11 @@ func (np *NatsProxy) activateWSProxySubject(conn *websocket.Conn, wsID string) {
 			} else {
 				np.removeFromWSMapper(conn, wsID)
 				conn.Close()
-				logWebsocketError(wsID, err)
+				// If websocket is closed normally RFC6455
+				// code 1000, then no error logged
+				if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					logWebsocketError(wsID, err)
+				}
 				break
 			}
 		}

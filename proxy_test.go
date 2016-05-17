@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -201,7 +200,6 @@ func TestWebSocket(t *testing.T) {
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
 	natsClient.GET("/ws/:token", func(c *Context) {
-		log.Println("Got ws request")
 		if c.Request.IsWebSocket() {
 			c.Response.DoUpgrade = true
 			natsClient.HandleWebsocket(c.Request.GetWebSocketID(), func(m *nats.Msg) {
@@ -210,16 +208,15 @@ func TestWebSocket(t *testing.T) {
 		}
 	})
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/1234", nil); err == nil {
 			conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
 			_, p, _ := conn.ReadMessage()
 			if string(p) != "Hi there" {
 				fmt.Println(string(p))
 				t.Error("Message assertion failed")
-			} else {
-				fmt.Println("Received message ok")
 			}
+			conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, "OK"))
 			if e := conn.Close(); e != nil {
 				t.Error("Cannot close WS")
 			}

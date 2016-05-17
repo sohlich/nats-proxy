@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/satori/go.uuid"
+	"github.com/nats-io/nuid"
 )
 
 func (r *Request) GetHeader() Variables {
@@ -51,7 +51,7 @@ func (r *Request) FromHTTP(req *http.Request) error {
 	isWebSock := IsWebSocketRequest(req)
 	wsID := ""
 	if isWebSock {
-		wsID = uuid.NewV4().String()
+		wsID = nuid.Next()
 	}
 
 	buf := bytes.NewBuffer(r.Body)
