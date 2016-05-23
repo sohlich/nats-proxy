@@ -131,6 +131,10 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 	})
 }
 
+// HandleWebsocket subscribes the
+// handler for specific websocketID.
+// The method adds the specific prefix
+// for client to proxy xommunication.
 func (nc *NatsClient) HandleWebsocket(webSocketID string, handler nats.MsgHandler) {
 	nc.conn.Subscribe(ws_IN+webSocketID, handler)
 }
@@ -146,6 +150,8 @@ func (nc *NatsClient) WriteWebsocketJSON(websocketID string, msg interface{}) er
 	}
 }
 
+// WriteWebsocket writes given bytes
+// to given websocket subject.
 func (nc *NatsClient) WriteWebsocket(websocketID string, data []byte) error {
 	return nc.conn.Publish(ws_OUT+websocketID, data)
 }
