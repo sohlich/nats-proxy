@@ -202,8 +202,12 @@ func TestWebSocket(t *testing.T) {
 	natsClient.GET("/ws/:token", func(c *Context) {
 		if c.Request.IsWebSocket() {
 			c.Response.DoUpgrade = true
-			natsClient.HandleWebsocket(c.Request.GetWebSocketID(), func(m *nats.Msg) {
-				natsClient.WriteWebsocket(c.Request.GetWebSocketID(), []byte("Hi there"))
+			socketID, err := c.GetWebsocketID()
+			if err != nil {
+				t.FailNow()
+			}
+			natsClient.HandleWebsocket(socketID, func(m *nats.Msg) {
+				natsClient.WriteWebsocket(socketID, []byte("Hi there"))
 			})
 		}
 	})

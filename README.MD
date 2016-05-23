@@ -46,6 +46,45 @@ requests.
 resp, err := http.Get("http://127.0.0.1:3000/test/12324/123")
 ```
 
+#### WebSocket support
+The web socket support is in early stage, but it is working. The proxy does not support
+close notifications for the client side and there is a lot of work to be done.
+
+```
+	clientConn, _ := nats.Connect(nats_url)
+	natsClient, _ := NewNatsClient(clientConn)
+	
+	// Basic nats-proxy handler
+	natsClient.GET("/ws/:token", func(c *Context) {
+		
+		// Test if the client 
+		// contains websocket handshake
+		if c.Request.IsWebSocket() {
+			
+			// If so, the DoUpgrade 
+			// flag must be set to true, 
+			// to notify proxy to do the websocket upgrade
+			c.Response.DoUpgrade = true
+			
+			// Each websocket connection has its
+			// unique id, which is practically 
+			// the subject of NATS
+			socketID, err := c.GetWebsocketID()
+			
+			// The handler for incoming 
+			// messages could be set.
+			natsClient.HandleWebsocket(socketID, func(m *nats.Msg) {
+				
+				// WriteWebsocket writes
+				// the message directly to
+				// NATS subject
+				natsClient.WriteWebsocket(socketID, []byte("Hi there"))
+			})
+		}
+	})
+```
+
+
 
 ### Advanced features
 

@@ -154,6 +154,13 @@ func (c *Context) ParseForm() error {
 	return err
 }
 
+func (c *Context) GetWebsocketID() (wdsID string, err error) {
+	if c.Request.GetWebSocketID() == "" {
+		return "", errors.New("Not a websocket request")
+	}
+	return c.Request.GetWebSocketID(), nil
+}
+
 func parseForm(r *Request, header string) (url.Values, error) {
 	var err error
 	if r.Body == nil {
