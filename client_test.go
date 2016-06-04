@@ -15,7 +15,7 @@ var nats_url = getTestNatsUrl()
 func getTestNatsUrl() string {
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
-		natsURL = "192.168.99.100:4222"
+		natsURL = "127.0.0.1:4222"
 	}
 	return fmt.Sprintf("nats://%s", natsURL)
 }

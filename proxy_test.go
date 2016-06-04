@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -195,7 +196,8 @@ func TestWebSocket(t *testing.T) {
 	defer proxyConn.Close()
 
 	proxyHandler, _ := NewNatsProxy(proxyConn)
-	go http.ListenAndServe(":8080", proxyHandler)
+	server := httptest.NewServer(proxyHandler)
+	defer server.Close()
 
 	clientConn, _ := nats.Connect(nats_url)
 	natsClient, _ := NewNatsClient(clientConn)
@@ -212,8 +214,9 @@ func TestWebSocket(t *testing.T) {
 		}
 	})
 
+	addr := strings.Replace(server.URL, "http", "ws", -1)
 	for i := 0; i < 100; i++ {
-		if conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/1234", nil); err == nil {
+		if conn, _, err := websocket.DefaultDialer.Dial(addr+"/ws/1234", nil); err == nil {
 			conn.WriteMessage(websocket.TextMessage, []byte("Hello"))
 			_, p, _ := conn.ReadMessage()
 			if string(p) != "Hi there" {
@@ -230,4 +233,46 @@ func TestWebSocket(t *testing.T) {
 		}
 	}
 
+}
+
+func BenchmarkWebsocketWrite(t *testing.B) {
+	proxyConn, _ := nats.Connect(nats_url)
+	defer proxyConn.Close()
+
+	proxyHandler, _ := NewNatsProxy(proxyConn)
+	server := httptest.NewServer(proxyHandler)
+	defer server.Close()
+
+	clientConn, _ := nats.Connect(nats_url)
+	natsClient, _ := NewNatsClient(clientConn)
+	defer clientConn.Close()
+	natsClient.GET("/ws/:token", func(c *Context) {
+		log.Println("Permission to upgrade granted")
+		if c.Request.IsWebSocket() {
+			c.Response.DoUpgrade = true
+			socketID, err := c.GetWebsocketID()
+			if err != nil {
+				t.FailNow()
+			}
+			natsClient.HandleWebsocket(socketID, func(m *nats.Msg) {
+				log.Println(m.Data)
+			})
+		}
+	})
+
+	addr := strings.Replace(server.URL, "http", "ws", -1)
+
+	if conn, _, err := websocket.DefaultDialer.Dial(addr+"/ws/1234", nil); err == nil {
+		t.ResetTimer()
+		t.StartTimer()
+		for index := 0; index < t.N; index++ {
+			conn.WriteMessage(websocket.BinaryMessage, []byte{0x01, 0x02, 0x03, 0x04})
+		}
+		t.StopTimer()
+		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, "OK"))
+		conn.Close()
+	} else {
+		log.Println(err)
+		t.Fail()
+	}
 }

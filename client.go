@@ -2,6 +2,7 @@ package natsproxy
 
 import (
 	"log"
+	"time"
 
 	"encoding/json"
 
@@ -134,7 +135,7 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 // HandleWebsocket subscribes the
 // handler for specific websocketID.
 // The method adds the specific prefix
-// for client to proxy xommunication.
+// for client to proxy communication.
 func (nc *NatsClient) HandleWebsocket(webSocketID string, handler nats.MsgHandler) {
 	nc.conn.Subscribe(ws_IN+webSocketID, handler)
 }
@@ -154,4 +155,40 @@ func (nc *NatsClient) WriteWebsocketJSON(websocketID string, msg interface{}) er
 // to given websocket subject.
 func (nc *NatsClient) WriteWebsocket(websocketID string, data []byte) error {
 	return nc.conn.Publish(ws_OUT+websocketID, data)
+}
+
+func (nc *NatsClient) SendGET(url string, req *Request) (response *Response, err error) {
+	return nc.Send(GET, url, req)
+}
+
+func (nc *NatsClient) SendPOST(url string, req *Request) (response *Response, err error) {
+	return nc.Send(POST, url, req)
+}
+
+func (nc *NatsClient) SendDELETE(url string, req *Request) (response *Response, err error) {
+	return nc.Send(DELETE, url, req)
+}
+
+func (nc *NatsClient) SendPUT(url string, req *Request) (response *Response, err error) {
+	return nc.Send(PUT, url, req)
+}
+
+func (nc *NatsClient) Send(method string, url string, req *Request) (response *Response, err error) {
+	subject := SubscribeURLToNats(method, url)
+	response, err = nc.requestResponse(subject, req)
+	return
+}
+
+func (nc *NatsClient) requestResponse(subj string, req *Request) (res *Response, err error) {
+	res = &Response{}
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return
+	}
+	msg, err := nc.conn.Request(subj, data, time.Second)
+	if err != nil {
+		return
+	}
+	err = res.ReadFrom(msg.Data)
+	return
 }
