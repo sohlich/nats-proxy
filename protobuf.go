@@ -21,3 +21,7 @@ func (h Variables) Add(key, value string) {
 		h.Set(key, value)
 	}
 }
+
+func (h Variables) Del(key string) {
+	delete(h, key)
+}
