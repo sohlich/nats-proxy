@@ -14,7 +14,7 @@ func TestPathVariable(t *testing.T) {
 		URL: url,
 	}
 	resp := &Response{}
-	ctx := newContext("/test/:token/:session", resp, req)
+	ctx := newContext(buildParamMap("/test/:token/:session"), resp, req)
 
 	tkn := ctx.PathVariable("token")
 	if tkn != "1234" {
@@ -53,7 +53,7 @@ func TestParseForm(t *testing.T) {
 	req.Header.Set("X-AUTH", "xauthpayload")
 	testRequest := NewRequest()
 	testRequest.FromHTTP(req)
-	c := newContext(url, NewResponse(), testRequest)
+	c := newContext(buildParamMap(url), NewResponse(), testRequest)
 	c.ParseForm()
 
 	if c.FormVariable("name") != "postname" {
@@ -70,7 +70,7 @@ func TestParseFormNilBody(t *testing.T) {
 	testRequest := NewRequest()
 	testRequest.FromHTTP(req)
 	testRequest.Body = nil
-	c := newContext(url, NewResponse(), testRequest)
+	c := newContext(buildParamMap(url), NewResponse(), testRequest)
 	if err := c.ParseForm(); err == nil {
 		t.FailNow()
 	}
@@ -81,7 +81,7 @@ func TestAbortContext(t *testing.T) {
 		URL: "/test/1234/tst",
 	}
 	resp := &Response{}
-	ctx := newContext("/test/:token/:session", resp, req)
+	ctx := newContext(buildParamMap("/test/:token/:session"), resp, req)
 	ctx.Abort()
 	if ctx.IsAborted() != true {
 		t.FailNow()
@@ -95,7 +95,7 @@ func TestAbortJSONContext(t *testing.T) {
 		URL: "/test/1234/tst",
 	}
 	resp := &Response{}
-	ctx := newContext("/test/:token/:session", resp, req)
+	ctx := newContext(buildParamMap("/test/:token/:session"), resp, req)
 	ctx.AbortWithJSON("test")
 	if ctx.IsAborted() != true {
 		t.FailNow()
@@ -121,7 +121,7 @@ func TestBindJson(t *testing.T) {
 		Body: data,
 	}
 	resp := &Response{}
-	ctx := newContext("/test/:token/:session", resp, req)
+	ctx := newContext(buildParamMap("/test/:token/:session"), resp, req)
 
 	verifStruct := &testStruct{}
 	ctx.BindJSON(verifStruct)

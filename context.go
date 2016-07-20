@@ -82,10 +82,7 @@ func (c *Context) PathVariable(name string) string {
 	pathParams := strings.Split(URL, "/")
 
 	index, ok := c.params[name]
-	if !ok {
-		return ""
-	}
-	if len(pathParams) <= index {
+	if !ok || len(pathParams) <= index {
 		return ""
 	}
 	return pathParams[index]
@@ -225,15 +222,14 @@ func (c *Context) writeError(err error) {
 	c.Response.Body = []byte(err.Error())
 }
 
-func newContext(url string, res *Response, req *Request) *Context {
-	m := buildParamMap(url)
+func newContext(paramMap map[string]int, res *Response, req *Request) *Context {
 	return &Context{
 		req,
 		res,
 		nil,
 		0,
 		1<<31 - 1,
-		m,
+		paramMap,
 	}
 }
 

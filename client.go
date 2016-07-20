@@ -101,6 +101,7 @@ func (nc *NatsClient) DELETE(url string, handler NatsHandler) {
 // wraps the processing of the context.
 func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 	subscribeURL := SubscribeURLToNats(method, url)
+	paramMap := buildParamMap(url)
 	nc.conn.Subscribe(subscribeURL, func(m *nats.Msg) {
 		request := nc.reqPool.GetRequest()
 		defer nc.reqPool.Put(request)
@@ -110,7 +111,7 @@ func (nc *NatsClient) Subscribe(method, url string, handler NatsHandler) {
 		}
 		response := nc.resPool.GetResponse()
 		defer nc.resPool.Put(response)
-		c := newContext(url, response, request)
+		c := newContext(paramMap, response, request)
 
 		// Iterate through filters
 		for _, filter := range nc.filters {
