@@ -106,6 +106,7 @@ func (np *NatsProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	err = response.ReadFrom(msg.Data)
 	defer np.responsePool.Put(response)
 	if err != nil {
+		log.Println("nats-proxy:" + err.Error())
 		http.Error(rw, "Cannot deserialize response", http.StatusInternalServerError)
 		return
 	}

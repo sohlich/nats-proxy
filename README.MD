@@ -1,17 +1,12 @@
 # REST to NATS proxy.
 
+REST API over [NATS protocol](http://nats.io).
+
 [![Build Status](https://travis-ci.org/sohlich/nats-proxy.svg?branch=master)](https://travis-ci.org/sohlich/nats-proxy)
 [![GoReport](https://goreportcard.com/badge/github.com/sohlich/nats-proxy)](https://goreportcard.com/report/github.com/sohlich/nats-proxy)
 [![GoDoc](https://godoc.org/github.com/sohlich/nats-proxy?status.svg)](https://godoc.org/github.com/sohlich/nats-proxy)
 
-
-
-
-This library provides translation of HTTP requests to NATS messaging platform. 
-Client side is partly inspired by https://github.com/gin-gonic/gin project to process the
-requests.
-
-#### The library is under development but the main API should remain stable.
+The microframework for building the REST API on NATS messaging platform. As the part of the framework is proxy bridging HTTP protocol to NATS protocol. 
 
 ### Example usage
 
