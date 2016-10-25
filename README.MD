@@ -5,6 +5,7 @@ REST API over [NATS protocol](http://nats.io).
 [![Build Status](https://travis-ci.org/sohlich/nats-proxy.svg?branch=master)](https://travis-ci.org/sohlich/nats-proxy)
 [![GoReport](https://goreportcard.com/badge/github.com/sohlich/nats-proxy)](https://goreportcard.com/report/github.com/sohlich/nats-proxy)
 [![GoDoc](https://godoc.org/github.com/sohlich/nats-proxy?status.svg)](https://godoc.org/github.com/sohlich/nats-proxy)
+[![Coverage Status](https://coveralls.io/repos/github/sohlich/nats-proxy/badge.svg?branch=master)](https://coveralls.io/github/sohlich/nats-proxy?branch=master)
 
 The microframework for building the REST API on NATS messaging platform. As the part of the framework is proxy bridging HTTP protocol to NATS protocol. 
 
